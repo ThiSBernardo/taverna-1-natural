@@ -17,15 +17,15 @@ import {
   Home,
   Compass,
   Shield,
-  ShoppingBag,
+  Bookmark,
   BookOpen,
+  Library,
   Plus,
-  Menu,
-  Sparkles
+  Menu
 } from 'lucide-react';
 import { UserProfile } from '../../types/user';
 
-export type MainNavRoute = 'campanhas' | 'descubra' | 'guildas' | 'loja';
+export type MainNavRoute = 'campanhas' | 'descubra' | 'guildas';
 
 export interface HeaderProps {
   user: UserProfile;
@@ -34,7 +34,6 @@ export interface HeaderProps {
   onOpenCreateMenu: () => void;
   onOpenProfile: () => void;
   onOpenFriends: () => void;
-  onOpenShop: () => void;
   onOpenLibrary: () => void;
   onOpenChangelog: () => void;
   onNavigateHome: () => void;
@@ -47,7 +46,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCreateMenu,
   onOpenProfile,
   onOpenFriends,
-  onOpenShop,
   onOpenLibrary,
   onOpenChangelog,
   onNavigateHome,
@@ -61,8 +59,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-[#0B0E14]/90 backdrop-blur-md border-b border-white/[0.08] px-3 sm:px-6 lg:px-10 py-2.5">
-        <div className="max-w-[1440px] w-full mx-auto flex items-center justify-between gap-2">
+      <header className="sticky top-0 z-40 bg-[#0B0E14]/90 backdrop-blur-md border-b border-white/[0.08] px-4 sm:px-8 xl:px-[70px] py-2.5">
+        <div className="w-full mx-auto flex items-center justify-between gap-2">
           
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <button 
@@ -93,10 +91,10 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => onRouteChange('descubra')}
-                className={`flex items-center gap-2 py-1.5 transition-all cursor-pointer ${
+                className={`flex items-center gap-2 transition-all cursor-pointer ${
                   currentRoute === 'descubra'
-                    ? 'text-white border-b-2 border-white pb-0.5 font-bold'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'text-white border border-purple-500/70 bg-purple-950/30 px-3.5 py-1 rounded-full font-bold shadow-[0_0_12px_rgba(168,85,247,0.3)]'
+                    : 'text-slate-400 hover:text-white px-2 py-1.5'
                 }`}
               >
                 <Compass className="w-4 h-4" />
@@ -112,88 +110,66 @@ export const Header: React.FC<HeaderProps> = ({
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <Shield className="w-4 h-4" />
+                <Bookmark className="w-4 h-4" />
                 <span>Guildas</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onRouteChange('loja')}
-                className={`flex items-center gap-2 py-1.5 transition-all cursor-pointer ${
-                  currentRoute === 'loja'
-                    ? 'text-white border-b-2 border-white pb-0.5 font-bold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <ShoppingBag className="w-4 h-4" />
-                <span>Loja</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={onOpenShop}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-lg border border-purple-500/50 bg-purple-950/40 text-purple-200 hover:bg-purple-900/50 hover:border-purple-400/70 transition-all cursor-pointer font-cinzel text-xs"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-purple-300" />
-                <span>Planos</span>
               </button>
             </nav>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2.5 md:gap-3.5 shrink-0">
+          <div className="flex items-center gap-3 sm:gap-4 md:gap-5 lg:gap-6 shrink-0">
             <button
               type="button"
               onClick={onOpenCreateMenu}
-              className="bg-[#8A4FFF] hover:bg-[#7839EE] text-white font-semibold text-xs px-4 sm:px-5 py-1.5 rounded-full shadow-[0_0_16px_rgba(138,79,255,0.4)] flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 font-cinzel tracking-wide"
+              className="bg-[#8A4FFF] hover:bg-[#7839EE] text-white font-serif font-bold text-xs sm:text-sm px-4 sm:px-5 py-2 rounded-full shadow-[0_0_18px_rgba(138,79,255,0.45)] flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 tracking-wide"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Criar</span>
             </button>
 
-            <button
-              type="button"
-              onClick={onOpenShop}
-              className="w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 shadow-[0_0_10px_rgba(245,158,11,0.45)] border border-amber-300/60 flex items-center justify-center text-white cursor-pointer hover:scale-105 transition-transform"
+            <div
+              className="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-full bg-gradient-to-b from-[#FFE380] via-[#DCA32E] to-[#8F590A] p-[2px] shadow-[0_2px_8px_rgba(220,163,46,0.45)] flex items-center justify-center cursor-default hover:scale-105 transition-transform"
               title={`${user.coins} moedas`}
             >
-              <Zap className="w-3.5 h-3.5 fill-white text-white" />
-            </button>
+              <div className="w-full h-full rounded-full bg-gradient-to-b from-[#FAD766] via-[#DE9D24] to-[#A3690B] flex items-center justify-center border border-[#FFECA6]/60 shadow-inner">
+                <Zap className="w-3.5 h-3.5 fill-[#FFF8DC] text-[#FFF8DC] drop-shadow-[0_1px_1px_rgba(110,70,5,0.7)]" />
+              </div>
+            </div>
 
             <button
               type="button"
               onClick={onOpenChangelog}
-              className="w-8 h-8 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 flex items-center justify-center transition-colors cursor-pointer hidden sm:flex"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer hidden sm:flex"
               title="Áudio / Novidades"
             >
-              <Megaphone className="w-4 h-4" />
+              <Megaphone className="w-5 h-5" />
             </button>
 
             <button
               type="button"
               onClick={onOpenLibrary}
-              className="w-8 h-8 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 flex items-center justify-center transition-colors cursor-pointer hidden sm:flex"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer hidden sm:flex"
               title="Biblioteca"
             >
-              <BookOpen className="w-4 h-4" />
+              <Library className="w-5 h-5" />
             </button>
 
             <button
               type="button"
               onClick={onOpenFriends}
-              className="w-8 h-8 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 flex items-center justify-center transition-colors cursor-pointer hidden sm:flex relative"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer hidden sm:flex relative"
               title="Lista de Amigos"
             >
-              <Users className="w-4 h-4" />
+              <Users className="w-5 h-5" />
             </button>
 
             <div className="relative hidden md:block">
               <button
                 type="button"
                 onClick={() => setShowNotifPopover(!showNotifPopover)}
-                className="w-8 h-8 rounded-lg text-slate-300 hover:text-white hover:bg-white/5 flex items-center justify-center transition-colors cursor-pointer relative"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer relative"
                 title="Notificações"
               >
-                <Bell className="w-4 h-4" />
+                <Bell className="w-5 h-5" />
                 {unreadNotifs > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-purple-600 text-white rounded-full text-[9px] flex items-center justify-center font-bold">
                     {unreadNotifs}
@@ -234,10 +210,10 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => setShowUserDropdown(!showUserDropdown)}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl bg-gradient-to-b from-slate-200 to-slate-400 hover:from-white hover:to-slate-300 flex items-center justify-center text-slate-600 transition-all cursor-pointer shrink-0 shadow-sm border border-white/20"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#CBD5E1] hover:bg-[#E2E8F0] flex items-center justify-center text-[#64748B] transition-all cursor-pointer shrink-0 shadow-sm border border-white/10"
                 title={user.displayName}
               >
-                <User className="w-4.5 h-4.5 sm:w-5 sm:h-5 fill-slate-500/80 text-slate-500/80" />
+                <User className="w-5 h-5 sm:w-6 sm:h-6 fill-[#64748B] text-[#64748B]" />
               </button>
 
               {showUserDropdown && (
@@ -246,15 +222,6 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="font-semibold text-gray-200">{user.displayName}</div>
                     <div className="text-[11px] text-purple-400">Código: {user.friendCode}</div>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => { setShowUserDropdown(false); onOpenShop(); }}
-                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-purple-600/20 text-yellow-300 flex items-center gap-2 cursor-pointer"
-                  >
-                    <Crown className="w-4 h-4 text-yellow-400" />
-                    <span>Aprimorar experiência</span>
-                  </button>
 
                   <button
                     type="button"
@@ -366,19 +333,6 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Shield className="w-4 h-4 text-purple-400" />
               <span>Guildas</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => { onRouteChange('loja'); setShowMobileMenu(false); }}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer ${
-                currentRoute === 'loja'
-                  ? 'bg-purple-600/20 text-purple-200 border border-purple-500/40'
-                  : 'text-gray-300 hover:bg-white/5'
-              }`}
-            >
-              <ShoppingBag className="w-4 h-4 text-purple-400" />
-              <span>Loja</span>
             </button>
 
             <button

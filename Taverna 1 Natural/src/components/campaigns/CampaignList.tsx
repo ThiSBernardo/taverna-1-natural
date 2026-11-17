@@ -21,6 +21,7 @@ interface CampaignListProps {
   campaigns: Campaign[];
   currentUserId: string;
   onOpenCampaignDetail: (campaign: Campaign) => void;
+  onEnterGame?: (campaign: Campaign) => void;
   onOpenCreateCampaign: () => void;
   onOpenInviteModal: () => void;
   onNavigateToDiscover: () => void;
@@ -31,6 +32,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
   campaigns,
   currentUserId,
   onOpenCampaignDetail,
+  onEnterGame,
   onOpenCreateCampaign,
   onOpenInviteModal,
   onNavigateToDiscover,
@@ -102,11 +104,11 @@ export const CampaignList: React.FC<CampaignListProps> = ({
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => onOpenCampaignDetail(featuredCampaign)}
+                onClick={() => onEnterGame ? onEnterGame(featuredCampaign) : onOpenCampaignDetail(featuredCampaign)}
                 className="rounded-full bg-[#8A4FFF] hover:bg-[#7839EE] text-white font-semibold text-xs sm:text-sm px-7 py-2.5 flex items-center gap-2 shadow-[0_0_24px_rgba(138,79,255,0.4)] cursor-pointer active:scale-95 transition-all"
               >
                 <Play className="w-3.5 h-3.5 fill-white" />
-                <span>Entrar</span>
+                <span>Entrar no Jogo</span>
               </button>
 
               <button

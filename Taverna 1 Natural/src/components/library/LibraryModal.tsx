@@ -1,262 +1,428 @@
 import React, { useState } from 'react';
 import { 
-  X, 
-  FolderGit2, 
-  User, 
-  Swords, 
-  Image as ImageIcon, 
-  Plus, 
-  Copy, 
-  Trash2, 
-  BookOpen, 
+  ArrowLeft,
+  Eye,
+  Heart,
+  Crown,
+  MoreHorizontal,
+  Swords,
+  Library,
+  MessageSquare,
+  Dices,
   Sparkles,
-  ExternalLink
+  Folder,
+  Dna,
+  Star,
+  Users,
+  User,
+  Plus
 } from 'lucide-react';
 import { Character } from '../../types/character';
-import { RPG_SYSTEMS } from '../../types/rpg-systems';
+import { Campaign } from '../../types/campaign';
+import { UserProfile } from '../../types/user';
+import { RPG_SYSTEMS, RPGSystemId } from '../../types/rpg-systems';
+import coverOrdem from '../../assets/systems/cover_ordem_paranormal.png';
+import coverDnd from '../../assets/systems/cover_dnd_5e.png';
+import coverTormenta from '../../assets/systems/cover_tormenta_20.png';
+import coverFabula from '../../assets/systems/cover_fabula_ultima.png';
 
-interface LibraryModalProps {
+export interface LibraryModalProps {
   isOpen: boolean;
   characters: Character[];
-  userCode: string;
+  user: UserProfile;
+  campaigns: Campaign[];
+  recentRollsCount?: number;
   onClose: () => void;
   onOpenCharacterSheet: (character: Character) => void;
   onStartCreateCharacter: () => void;
-  onCloneCharacter: (character: Character) => void;
-  onDeleteCharacter: (characterId: string) => void;
+  onOpenProfile?: () => void;
+  onOpenShop?: () => void;
+  onOpenPublicProfile?: () => void;
+  onOpenCreateCampaign?: () => void;
+  onOpenCampaignDetail?: (campaign: Campaign) => void;
 }
 
 export const LibraryModal: React.FC<LibraryModalProps> = ({
   isOpen,
   characters,
-  userCode,
+  user,
+  campaigns,
+  recentRollsCount = 2,
   onClose,
   onOpenCharacterSheet,
   onStartCreateCharacter,
-  onCloneCharacter,
-  onDeleteCharacter,
+  onOpenProfile,
+  onOpenShop,
+  onOpenPublicProfile,
+  onOpenCreateCampaign,
+  onOpenCampaignDetail,
 }) => {
-  const [activeTab, setActiveTab] = useState<'chars' | 'items' | 'media'>('chars');
-  const [selectedFolder, setSelectedFolder] = useState<string>('all');
+  const [activeItemTab, setActiveItemTab] = useState<'campanhas' | 'sistemas'>('campanhas');
 
   if (!isOpen) return null;
 
-  // Group characters by folder
-  const folders = Array.from(new Set(characters.map(c => c.folder || 'Sem campanha')));
+  const activeCampaign = campaigns[0] || {
+    id: 'camp-default',
+    title: 'Campanha de Teste Mapeamento',
+    systemId: 'ordem-paranormal',
+    masterName: user.displayName
+  };
 
-  const filteredChars = characters.filter(c => {
-    if (selectedFolder !== 'all' && (c.folder || 'Sem campanha') !== selectedFolder) return false;
-    return true;
-  });
+  const currentSystemName = RPG_SYSTEMS.find(s => s.id === activeCampaign.systemId)?.name || 'Ordem Paranormal';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md">
-      <div className="glass-panel-elevated max-w-4xl w-full rounded-2xl p-6 relative animate-modal-in border border-white/10 shadow-2xl max-h-[92vh] flex flex-col">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-500/40 flex items-center justify-center">
-              <FolderGit2 className="w-5 h-5 text-purple-300" />
-            </div>
-            <div>
-              <h3 className="font-cinzel text-lg font-bold text-white">Minha Biblioteca</h3>
-              <p className="text-xs text-purple-400 font-mono">darkagerpg.com/Biblioteca/{userCode}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white p-1">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0a0714] text-gray-100 select-none">
+      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_80%_60%_at_10%_15%,rgba(109,40,217,0.45)_0%,rgba(67,24,138,0.22)_35%,transparent_65%),radial-gradient(ellipse_60%_40%_at_85%_25%,rgba(124,58,237,0.16)_0%,transparent_55%)]" />
 
-        {/* Tabs & Storage bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 py-3 text-xs">
-          <div className="flex gap-2">
+      <div className="relative max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-10 py-5 min-h-screen flex flex-col justify-between">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
             <button
-              onClick={() => setActiveTab('chars')}
-              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-semibold transition-colors ${
-                activeTab === 'chars'
-                  ? 'bg-purple-600/30 text-purple-300 border border-purple-500/40'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#141122]/90 hover:bg-[#1f1a35] border border-white/10 text-xs text-gray-200 transition-all cursor-pointer shadow-sm active:scale-95"
             >
-              <User className="w-3.5 h-3.5" />
-              <span>Personagens ({characters.length})</span>
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Voltar</span>
             </button>
 
             <button
-              onClick={() => setActiveTab('media')}
-              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-semibold transition-colors ${
-                activeTab === 'media'
-                  ? 'bg-purple-600/30 text-purple-300 border border-purple-500/40'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
+              type="button"
+              onClick={onOpenPublicProfile}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#141122]/90 hover:bg-[#1f1a35] border border-white/10 text-xs text-gray-200 transition-all cursor-pointer shadow-sm active:scale-95"
             >
-              <ImageIcon className="w-3.5 h-3.5" />
-              <span>Galeria de Mídias</span>
+              <Eye className="w-3.5 h-3.5" />
+              <span>Ver como visitante</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-2 text-gray-400 text-[11px]">
-            <span>Uso de Nuvem: <strong className="text-purple-300">320 MB</strong> / 5 GB (Plano Duque)</span>
-          </div>
-        </div>
-
-        {/* Body Content */}
-        <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
-          
-          {/* TAB 1: PERSONAGENS */}
-          {activeTab === 'chars' && (
-            <div className="space-y-4">
-              
-              {/* Folder Filter & New Character Button */}
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                <div className="flex gap-1.5 overflow-x-auto py-1">
-                  <button
-                    onClick={() => setSelectedFolder('all')}
-                    className={`px-3 py-1 rounded-lg border transition-all ${
-                      selectedFolder === 'all'
-                        ? 'bg-purple-600 border-purple-400 text-white font-semibold'
-                        : 'bg-black/30 border-white/10 text-gray-400'
-                    }`}
-                  >
-                    Todos ({characters.length})
-                  </button>
-                  {folders.map(f => (
-                    <button
-                      key={f}
-                      onClick={() => setSelectedFolder(f)}
-                      className={`px-3 py-1 rounded-lg border transition-all ${
-                        selectedFolder === f
-                          ? 'bg-purple-600 border-purple-400 text-white font-semibold'
-                          : 'bg-black/30 border-white/10 text-gray-400'
-                      }`}
-                    >
-                      📁 {f} ({characters.filter(c => (c.folder || 'Sem campanha') === f).length})
-                    </button>
-                  ))}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div className="lg:col-span-8 bg-[#120f1e]/90 border border-white/[0.08] rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.45)]">
+              <div className="flex items-center gap-4 sm:gap-5">
+                <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-[#CBD5E1] flex items-center justify-center shrink-0 shadow-inner">
+                  <User className="w-12 h-12 sm:w-14 sm:h-14 fill-[#64748B] text-[#64748B]" />
                 </div>
+                <div>
+                  <h1 className="font-serif text-2xl sm:text-3xl font-bold text-white tracking-wide">
+                    {user.displayName}
+                  </h1>
+                  <p className="text-xs text-gray-400 mt-1 flex items-center gap-3 font-sans">
+                    <span>{campaigns.length} Campanhas</span>
+                    <span className="text-gray-600">•</span>
+                    <span>{characters.length} Personagens</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 border border-white/10 text-xs text-white hover:border-purple-500/40 transition-colors"
+                >
+                  <Heart className="w-3.5 h-3.5 fill-white text-white" />
+                  <span>0</span>
+                </button>
 
                 <button
-                  onClick={onStartCreateCharacter}
-                  className="btn-primary px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5"
+                  type="button"
+                  onClick={onOpenProfile}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/40 border border-white/10 text-xs text-white hover:bg-white/10 hover:border-purple-500/40 transition-colors cursor-pointer"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Criar Personagem</span>
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Ver perfil</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onOpenShop}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/40 border border-white/10 text-xs text-white hover:bg-white/10 hover:border-purple-500/40 transition-colors cursor-pointer"
+                >
+                  <Crown className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Assinar plano</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onOpenProfile}
+                  className="w-8 h-8 rounded-full bg-black/40 border border-white/10 flex items-center justify-center text-gray-300 hover:text-white hover:border-purple-500/40 transition-colors cursor-pointer"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
                 </button>
               </div>
+            </div>
 
-              {/* Character Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {filteredChars.map(char => {
-                  const sys = RPG_SYSTEMS.find(s => s.id === char.systemId);
-                  return (
-                    <div 
-                      key={char.id}
-                      className="p-4 rounded-2xl border border-white/10 bg-[#141520]/80 glass-panel flex flex-col justify-between group hover:border-purple-500/40 transition-all"
-                    >
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <img 
-                            src={char.token.imageUrl} 
+            <div className="lg:col-span-4 bg-[#120f1e]/90 border border-white/[0.08] rounded-2xl p-5 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.45)] flex flex-col justify-center">
+              <div className="grid grid-cols-2 gap-y-5 gap-x-6">
+                <div className="flex items-center gap-3">
+                  <Library className="w-5 h-5 text-purple-400 shrink-0" />
+                  <div>
+                    <div className="text-base font-bold text-white leading-tight">{campaigns.length}</div>
+                    <div className="text-[11px] text-gray-400">Campanhas</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Swords className="w-5 h-5 text-purple-400 shrink-0" />
+                  <div>
+                    <div className="text-base font-bold text-white leading-tight">{characters.length}</div>
+                    <div className="text-[11px] text-gray-400">Personagens</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="w-5 h-5 text-purple-400 shrink-0" />
+                  <div>
+                    <div className="text-base font-bold text-white leading-tight">0</div>
+                    <div className="text-[11px] text-gray-400">Mensagens</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Dices className="w-5 h-5 text-purple-400 shrink-0" />
+                  <div>
+                    <div className="text-base font-bold text-white leading-tight">{recentRollsCount}</div>
+                    <div className="text-[11px] text-gray-400">Rolagens</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <div className="lg:col-span-8 space-y-4">
+              <section className="bg-[#120f1e]/90 border border-white/[0.08] rounded-2xl p-5 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.45)]">
+                <div className="flex items-center justify-between pb-3">
+                  <div className="flex items-center gap-2">
+                    <Swords className="w-4 h-4 text-purple-400" />
+                    <h2 className="font-serif text-sm font-bold text-white">
+                      Personagens criados <span className="text-gray-500 font-sans font-normal text-xs">({characters.length})</span>
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onStartCreateCharacter}
+                    className="text-xs text-gray-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1 font-medium"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Gerenciar</span>
+                  </button>
+                </div>
+
+                {characters.length === 0 ? (
+                  <p className="text-xs text-gray-500 py-6">Nenhum personagem criado ainda.</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5 pt-2">
+                    {characters.map(char => (
+                      <div
+                        key={char.id}
+                        onClick={() => onOpenCharacterSheet(char)}
+                        className="group bg-[#0e0c17] rounded-xl overflow-hidden border border-white/[0.08] hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(139,92,246,0.25)] transition-all cursor-pointer flex flex-col"
+                      >
+                        <div className="aspect-[4/5] w-full overflow-hidden bg-black/60 relative">
+                          <img
+                            src={char.token?.imageUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=400&auto=format&fit=crop'}
                             alt={char.name}
-                            className="w-12 h-12 rounded-full object-cover ring-2 ring-purple-500/40" 
+                            className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
                           />
-                          <div>
-                            <h4 className="font-cinzel font-bold text-sm text-white group-hover:text-purple-300">
-                              {char.name}
-                            </h4>
-                            <div className="text-[10px] text-purple-400 font-semibold">
-                              {char.characterClass}
-                              {char.systemId.startsWith('ordem') ? ` · ${char.levelOrNex}% NEX` : ` · Nv.${char.levelOrNex}`}
-                            </div>
-                            <span className="text-[9px] bg-white/5 text-gray-400 px-1.5 py-0.2 rounded mt-0.5 inline-block">
-                              {sys?.name || 'RPG'}
-                            </span>
-                          </div>
                         </div>
-
-                        <div className="p-2 rounded-xl bg-black/40 border border-white/5 text-[10px] text-gray-400 flex items-center justify-between">
-                          <span>Pasta: <strong className="text-gray-300">{char.folder || 'Sem campanha'}</strong></span>
-                          <span>PV: <strong className="text-red-400">{char.hp.current}/{char.hp.max}</strong></span>
+                        <div className="bg-[#100d1c] px-3 py-2 border-t border-white/[0.06] text-center sm:text-left">
+                          <h3 className="text-xs font-semibold text-white truncate font-serif">
+                            {char.name}
+                          </h3>
                         </div>
                       </div>
+                    ))}
+                  </div>
+                )}
+              </section>
 
-                      <div className="pt-3 border-t border-white/5 flex items-center justify-between gap-1.5 mt-3">
-                        <button
-                          onClick={() => onOpenCharacterSheet(char)}
-                          className="btn-primary flex-1 py-1.5 rounded-xl text-xs font-semibold"
-                        >
-                          Abrir Ficha
-                        </button>
+              <section className="bg-[#120f1e]/90 border border-white/[0.08] rounded-2xl p-5 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.45)]">
+                <div className="flex items-center gap-2 pb-2">
+                  <Sparkles className="w-4 h-4 text-purple-400" />
+                  <h2 className="font-serif text-sm font-bold text-white">
+                    Vitrine de insígnias <span className="text-gray-500 font-sans font-normal text-xs">(0)</span>
+                  </h2>
+                </div>
+                <p className="text-xs text-gray-500 py-2">
+                  Nenhuma insígnia conquistada ainda.
+                </p>
+              </section>
 
-                        <button
-                          onClick={() => onCloneCharacter(char)}
-                          className="p-1.5 glass-button text-gray-400 hover:text-white rounded-lg"
-                          title="Clonar ficha para outra campanha"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                        </button>
+              <section className="bg-[#120f1e]/90 border border-white/[0.08] rounded-2xl p-5 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.45)]">
+                <div className="flex items-center justify-between pb-2">
+                  <div className="flex items-center gap-2">
+                    <Library className="w-4 h-4 text-purple-400" />
+                    <h2 className="font-serif text-sm font-bold text-white">
+                      Campanhas <span className="text-gray-500 font-sans font-normal text-xs">(0)</span>
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onOpenCreateCampaign}
+                    className="text-xs text-gray-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1 font-medium"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Gerenciar</span>
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 py-2">
+                  Você ainda não destacou nenhuma campanha.
+                </p>
+              </section>
 
-                        <button
-                          onClick={() => {
-                            if (confirm(`Tem certeza que deseja excluir ${char.name}?`)) {
-                              onDeleteCharacter(char.id);
-                            }
-                          }}
-                          className="p-1.5 glass-button text-gray-400 hover:text-red-400 rounded-lg"
-                          title="Excluir ficha"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+              <section className="bg-[#120f1e]/90 border border-white/[0.08] rounded-2xl p-5 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.45)]">
+                <div className="flex items-center gap-2 pb-3">
+                  <Users className="w-4 h-4 text-purple-400" />
+                  <h2 className="font-serif text-sm font-bold text-white">
+                    Meus Itens
+                  </h2>
+                </div>
+
+                <div className="flex items-center gap-2 pb-4">
+                  <button
+                    type="button"
+                    onClick={() => setActiveItemTab('campanhas')}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      activeItemTab === 'campanhas'
+                        ? 'border border-purple-500 bg-purple-950/40 text-purple-200 shadow-[0_0_12px_rgba(139,92,246,0.25)]'
+                        : 'border border-white/5 bg-white/[0.03] text-gray-400 hover:text-gray-200'
+                    }`}
+                  >
+                    <Folder className="w-3.5 h-3.5" />
+                    <span>Campanhas</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveItemTab('sistemas')}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      activeItemTab === 'sistemas'
+                        ? 'border border-purple-500 bg-purple-950/40 text-purple-200 shadow-[0_0_12px_rgba(139,92,246,0.25)]'
+                        : 'border border-white/5 bg-white/[0.03] text-gray-400 hover:text-gray-200'
+                    }`}
+                  >
+                    <Library className="w-3.5 h-3.5" />
+                    <span>Sistemas</span>
+                  </button>
+                </div>
+
+                {activeItemTab === 'campanhas' ? (
+                  <div className="flex flex-wrap gap-3">
+                    <div
+                      onClick={() => onOpenCampaignDetail?.(activeCampaign as Campaign)}
+                      className="w-48 bg-[#151222] border border-white/[0.08] hover:border-purple-500/40 rounded-xl p-3.5 flex flex-col justify-between min-h-[92px] transition-all cursor-pointer relative overflow-hidden group shadow-md"
+                    >
+                      <div className="z-10">
+                        <h3 className="text-xs font-bold text-white truncate font-serif">
+                          {activeCampaign.title}
+                        </h3>
+                        <div className="text-[11px] text-gray-400 mt-1">Mestre</div>
+                        <div className="text-[11px] text-gray-500">{currentSystemName}</div>
+                      </div>
+                      <div className="absolute right-2 bottom-2 opacity-15 group-hover:opacity-30 transition-opacity">
+                        <Library className="w-8 h-8 text-purple-400" />
                       </div>
                     </div>
-                  );
-                })}
-              </div>
 
-            </div>
-          )}
-
-          {/* TAB 2: GALERIA DE MÍDIAS */}
-          {activeTab === 'media' && (
-            <div className="space-y-4 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-300 font-semibold">Suas Imagens, Retratos e Mapas</span>
-                <button 
-                  onClick={() => alert('Selecione uma imagem do seu dispositivo para upload.')}
-                  className="btn-primary px-3 py-1.5 rounded-xl flex items-center gap-1.5"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Enviar Nova Imagem</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=400&auto=format&fit=crop',
-                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=400&auto=format&fit=crop',
-                  'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=400&auto=format&fit=crop',
-                  'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=400&auto=format&fit=crop',
-                ].map((imgUrl, i) => (
-                  <div key={i} className="h-28 rounded-xl overflow-hidden border border-white/10 relative group">
-                    <img src={imgUrl} alt={`Mídia ${i}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <button 
-                        onClick={() => alert('URL copiada para uso em tokens ou handouts!')}
-                        className="glass-button p-1.5 rounded-lg text-white"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </button>
+                    <div className="w-36 bg-[#151222] border border-white/[0.08] rounded-xl p-3.5 flex flex-col items-center justify-center min-h-[92px] text-center shadow-md">
+                      <Library className="w-6 h-6 text-purple-400 mb-1" />
+                      <span className="text-xs text-gray-300 font-medium">Sem campanha</span>
                     </div>
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { id: 'ordem', name: 'Ordem Paranormal', cover: coverOrdem },
+                      { id: 'dnd', name: 'D&D 5e', cover: coverDnd },
+                      { id: 'tormenta', name: 'Tormenta 20', cover: coverTormenta },
+                      { id: 'fabula', name: 'Fabula Ultima', cover: coverFabula }
+                    ].map(sys => (
+                      <div
+                        key={sys.id}
+                        className="bg-[#151222] border border-white/[0.08] rounded-xl p-2.5 flex items-center gap-2.5 shadow-md"
+                      >
+                        <img src={sys.cover} alt={sys.name} className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                        <span className="text-xs font-semibold text-white truncate font-serif">{sys.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
             </div>
-          )}
 
+            <aside className="lg:col-span-4 space-y-4">
+              <section className="bg-[#120f1e]/90 border border-white/[0.08] rounded-2xl p-5 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.45)]">
+                <div className="flex items-center gap-2 pb-2">
+                  <Dna className="w-4 h-4 text-purple-400" />
+                  <h2 className="font-mono text-xs font-bold uppercase tracking-wider text-purple-200">
+                    DNA DE RPG
+                  </h2>
+                </div>
+                <p className="text-xs text-gray-500 py-1">
+                  Sem dados suficientes ainda.
+                </p>
+              </section>
+
+              <section className="bg-[#120f1e]/90 border border-white/[0.08] rounded-2xl p-5 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.45)]">
+                <div className="flex items-center gap-2 pb-2">
+                  <Star className="w-4 h-4 text-purple-400 fill-purple-400" />
+                  <h2 className="font-mono text-xs font-bold uppercase tracking-wider text-purple-200">
+                    SISTEMA FAVORITO
+                  </h2>
+                </div>
+                <div className="bg-[#0e0c18] rounded-xl p-2.5 border border-white/[0.06] flex items-center gap-3 mt-1 shadow-sm">
+                  <img
+                    src={coverOrdem}
+                    alt="Ordem Paranormal"
+                    className="w-11 h-11 rounded-lg object-cover shadow-sm shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <h3 className="text-xs font-bold text-white truncate font-serif">
+                      Ordem Paranormal
+                    </h3>
+                    <p className="text-[11px] text-gray-400 mt-0.5">
+                      1 campanha(s)
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="bg-[#120f1e]/90 border border-white/[0.08] rounded-2xl p-5 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.45)]">
+                <div className="flex items-center gap-2 pb-2">
+                  <Library className="w-4 h-4 text-purple-400" />
+                  <h2 className="font-mono text-xs font-bold uppercase tracking-wider text-purple-200">
+                    CAMPANHA ATUAL
+                  </h2>
+                </div>
+                <div className="bg-[#0e0c18] rounded-xl p-2.5 border border-white/[0.06] flex items-center gap-3 mt-1 shadow-sm">
+                  <div className="w-11 h-11 rounded-lg bg-[#CBD5E1] flex items-center justify-center shrink-0 shadow-sm">
+                    <User className="w-6 h-6 fill-[#64748B] text-[#64748B]" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-xs font-bold text-white truncate font-serif">
+                      {activeCampaign.title}
+                    </h3>
+                    <p className="text-[11px] text-gray-400 mt-0.5">
+                      {currentSystemName}
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="bg-[#120f1e]/90 border border-white/[0.08] rounded-2xl p-5 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.45)]">
+                <div className="flex items-center gap-2 pb-2">
+                  <Users className="w-4 h-4 text-purple-400" />
+                  <h2 className="font-mono text-xs font-bold uppercase tracking-wider text-purple-200">
+                    GUILDA
+                  </h2>
+                </div>
+                <p className="text-xs text-gray-500 py-1">
+                  Não participa de nenhuma guilda.
+                </p>
+              </section>
+            </aside>
+          </div>
         </div>
-
       </div>
     </div>
   );

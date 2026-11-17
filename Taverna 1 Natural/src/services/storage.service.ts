@@ -310,6 +310,219 @@ const INITIAL_CHARACTERS: Character[] = [
 // Seed Campaigns
 const INITIAL_CAMPAIGNS: Campaign[] = [
   {
+    id: 'camp-test-mapping',
+    title: 'Campanha de Teste Mapeamento',
+    synopsis: 'Mapeamento detalhado das manifestações do Outro Lado e rituais arcanos.',
+    coverImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop',
+    systemId: 'ordem-paranormal',
+    masterId: 'user-thiago',
+    masterName: 'ThisBernardo',
+    masterAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=400&auto=format&fit=crop',
+    isMasterOnline: true,
+    isPublic: true,
+    requiresApproval: true,
+    maxPlayers: 5,
+    genres: ['Investigação', 'Terror'],
+    playStyles: ['Voz', 'Discord'],
+    isSessionActive: true,
+    sessionsHistory: [
+      { id: 'sess-test-old', date: 'Hoje', time: '14:00', durationHours: 3 }
+    ],
+    participants: [
+      {
+        userId: 'user-thiago',
+        userName: 'ThisBernardo',
+        userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=400&auto=format&fit=crop',
+        role: 'master',
+        isOnline: true
+      }
+    ],
+    chronicle: [],
+    inviteCode: 'TESTMAP',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'camp-crystal-lake',
+    title: 'O VERÃO EM CRYSTAL LAKE',
+    synopsis: 'Um acampamento isolado nas montanhas esconde um passado sangrento. Sobreviva à temporada.',
+    coverImage: 'https://images.unsplash.com/photo-1509248961158-e54f6934749c?q=80&w=800&auto=format&fit=crop',
+    systemId: 'dnd-5e-2014',
+    masterId: 'master-jason',
+    masterName: 'JasonM',
+    masterAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop',
+    isMasterOnline: true,
+    isPublic: true,
+    requiresApproval: true,
+    maxPlayers: 5,
+    genres: ['Terror', 'Sobrevivência'],
+    playStyles: ['Voz', 'Discord', 'Imersão Total'],
+    isSessionActive: false,
+    nextSession: {
+      id: 'sess-cl',
+      date: 'Em 3 dias',
+      time: '20:00',
+      durationHours: 3.5,
+      recurrence: 'weekly'
+    },
+    sessionsHistory: [],
+    participants: [],
+    chronicle: [],
+    inviteCode: 'CRYSTAL-LAKE',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'camp-peso-tempo',
+    title: 'O PESO DO TEMPO',
+    synopsis: 'Em uma cidade esquecida, cada badalada do relógio cobra um preço dos vivos.',
+    coverImage: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=800&auto=format&fit=crop',
+    systemId: 'ordem-paranormal',
+    masterId: 'master-chronos',
+    masterName: 'Chronos',
+    masterAvatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=200&auto=format&fit=crop',
+    isMasterOnline: true,
+    isPublic: true,
+    requiresApproval: true,
+    maxPlayers: 4,
+    genres: ['Suspense', 'Terror'],
+    playStyles: ['Voz', 'Investigação'],
+    isSessionActive: false,
+    nextSession: {
+      id: 'sess-pt',
+      date: 'Data a definir',
+      time: '19:00',
+      durationHours: 4,
+      recurrence: 'weekly'
+    },
+    sessionsHistory: [],
+    participants: [],
+    chronicle: [],
+    inviteCode: 'PESO-TEMPO',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'camp-reinos-aventura',
+    title: 'CRÔNICAS SOMBRIA.D&D',
+    synopsis: 'Reinos em colapso enfrentam criaturas ancestrais em busca de um artefato lendário.',
+    coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop',
+    systemId: 'dnd-5e-2014',
+    masterId: 'master-dnd',
+    masterName: 'DungeonMaster',
+    masterAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
+    isMasterOnline: true,
+    isPublic: true,
+    requiresApproval: true,
+    maxPlayers: 5,
+    genres: ['Suspense', 'Dark Fantasy'],
+    playStyles: ['Voz', 'Alta Dificuldade'],
+    isSessionActive: false,
+    nextSession: {
+      id: 'sess-ra',
+      date: 'Sessão passada',
+      time: '21:00',
+      durationHours: 4,
+      recurrence: 'weekly'
+    },
+    sessionsHistory: [],
+    participants: [],
+    chronicle: [],
+    inviteCode: 'CRONICAS-DND',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'camp-estrada',
+    title: 'UMA ESTRADA POSSIVELMENTE MORTAL',
+    synopsis: 'Uma viagem sem volta por uma rodovia interditada onde aberrações aguardam na névoa.',
+    coverImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=800&auto=format&fit=crop',
+    systemId: 'ordem-paranormal',
+    masterId: 'master-estrada',
+    masterName: 'Condutor',
+    masterAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop',
+    isMasterOnline: false,
+    isPublic: true,
+    requiresApproval: true,
+    maxPlayers: 6,
+    genres: ['Sobrevivência', 'Pós-Apocalíptico'],
+    playStyles: ['Voz', 'Sobrevivência'],
+    isSessionActive: false,
+    nextSession: {
+      id: 'sess-es',
+      date: 'Data a definir',
+      time: '20:00',
+      durationHours: 3,
+      recurrence: 'weekly'
+    },
+    sessionsHistory: [],
+    participants: [],
+    chronicle: [],
+    inviteCode: 'ESTRADA-MORTAL',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'camp-teste',
+    title: 'TESTE',
+    synopsis: 'Mesa experimental para teste de mecânicas narrativas e combate tático.',
+    coverImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop',
+    systemId: 'ficha-universal',
+    masterId: 'master-teste',
+    masterName: 'Avaliador',
+    masterAvatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=200&auto=format&fit=crop',
+    isMasterOnline: false,
+    isPublic: true,
+    requiresApproval: false,
+    maxPlayers: 4,
+    genres: ['Dark Fantasy', 'Sobrevivência'],
+    playStyles: ['Texto', 'Casual'],
+    isSessionActive: false,
+    nextSession: {
+      id: 'sess-t',
+      date: 'Data a definir',
+      time: '18:00',
+      durationHours: 2,
+      recurrence: 'weekly'
+    },
+    sessionsHistory: [],
+    participants: [],
+    chronicle: [],
+    inviteCode: 'TESTE-MESA',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'camp-sexta-feira',
+    title: 'SEXTA FEIRA',
+    synopsis: 'Lendas urbanas e rituais perigosos na calada da noite.',
+    coverImage: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=800&auto=format&fit=crop',
+    systemId: 'ordem-paranormal',
+    masterId: 'master-sexta',
+    masterName: 'Nocturno',
+    masterAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+    isMasterOnline: true,
+    isPublic: true,
+    requiresApproval: true,
+    maxPlayers: 5,
+    genres: ['Sobrevivência', 'Mitologia'],
+    playStyles: ['Voz', 'Gore'],
+    isSessionActive: false,
+    nextSession: {
+      id: 'sess-sf',
+      date: 'Data a definir',
+      time: '21:00',
+      durationHours: 3.5,
+      recurrence: 'weekly'
+    },
+    sessionsHistory: [],
+    participants: [],
+    chronicle: [],
+    inviteCode: 'SEXTA-FEIRA',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
     id: 'camp-1',
     title: 'O Segredo da Floresta Sombria',
     synopsis: 'Estranhos desaparecimentos na serra gaúcha levam uma equipe de agentes a investigar uma antiga vila abandonada envolvida por uma névoa espessa e símbolos de Sangue.',
@@ -443,34 +656,88 @@ const INITIAL_CAMPAIGNS: Campaign[] = [
 // Seed Guilds
 const INITIAL_GUILDS: Guild[] = [
   {
-    id: 'guild-1',
-    name: 'Ordem dos Guardiões da Névoa',
-    tag: 'ORDEM',
-    description: 'Coletivo dedicado a mestres e investigadores de horror paranormal e RPGs de mistério.',
+    id: 'guild-darkage',
+    name: 'Dark Age',
+    tag: 'DARK',
+    description: 'Guilda Oficial do Dark Age RPG',
     crestIcon: 'Castle',
     bannerImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop',
     themeColor: '#8b5cf6',
-    accessType: 'livre',
+    accessType: 'convite',
     isVerified: true,
-    memberCount: 48,
-    leaderId: 'user-thiago',
-    leaderName: 'ThiSBernardo',
-    rules: 'Respeito mútuo, sem spoilers de campanhas oficiais, foco em narrativa colaborativa.',
-    isMember: true
+    memberCount: 6,
+    campaignsCount: 1,
+    leaderId: 'leader-darkage',
+    leaderName: 'Dark Age Staff',
+    rules: 'Guilda oficial de anúncios, suporte e eventos do sistema.',
+    isMember: false
   },
   {
-    id: 'guild-2',
-    name: 'Vanguarda de Arton',
-    tag: 'VANG',
-    description: 'Guilda oficial de jogadores e criadores de conteúdo para Tormenta20 e cenários de alta fantasia.',
+    id: 'guild-samsara',
+    name: 'SAMSARA',
+    tag: 'SMSR',
+    description: 'SAMSARA Japão, Era Edo. Entre samurais, clãs e feiticeiros, o mundo mortal divide espaço com yokais, dragões, elfos e criaturas ancestrais. Além dele, existem planos onde o impossível se torna realidade: o Reino Feérico, Plano Astral, Abismo, Infernos e muitos outros. Explore, investigue e...',
     crestIcon: 'Shield',
-    themeColor: '#eab308',
+    bannerImage: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?q=80&w=800&auto=format&fit=crop',
+    themeColor: '#334155',
     accessType: 'aprovacao',
     isVerified: true,
-    memberCount: 92,
-    leaderId: 'leader-arton',
-    leaderName: 'Mestre da Masmorra',
-    rules: 'Mesa ativa ao menos quinzenalmente.',
+    memberCount: 8,
+    campaignsCount: 1,
+    leaderId: 'leader-samsara',
+    leaderName: 'Kenshin',
+    rules: 'Respeito à temática e participação ativa nas campanhas.',
+    isMember: false
+  },
+  {
+    id: 'guild-conclave',
+    name: 'RPG | Conclave De Distúrbios Mentais...',
+    tag: 'CDMP',
+    description: 'O RPG | Conclave de Distúrbios Mentais Psicodélicos Superficial Imaginário em Conjunto nasceu de um simples grupo de amigos que compartilhavam o mesmo gosto por histórias, personagens e, principalmente, pela vontade de criar algo juntos. Com o tempo, aquilo que...',
+    crestIcon: 'Dices',
+    bannerImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop',
+    themeColor: '#dc2626',
+    accessType: 'convite',
+    isVerified: false,
+    memberCount: 2,
+    campaignsCount: 0,
+    leaderId: 'leader-conclave',
+    leaderName: 'Mestre Caos',
+    rules: 'Narrativas experimentais e horror cósmico.',
+    isMember: false
+  },
+  {
+    id: 'guild-valhalla',
+    name: 'Valhalla',
+    tag: 'VAL',
+    description: 'Bem-vindo',
+    crestIcon: 'Castle',
+    bannerImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=800&auto=format&fit=crop',
+    themeColor: '#6d28d9',
+    accessType: 'convite',
+    isVerified: false,
+    memberCount: 1,
+    campaignsCount: 0,
+    leaderId: 'leader-valhalla',
+    leaderName: 'Odin',
+    rules: 'Honra e coragem nas mesas.',
+    isMember: false
+  },
+  {
+    id: 'guild-iniciando',
+    name: 'iniciando',
+    tag: 'INI',
+    description: 'nunca joguei um rpg mais sempre tive vontade de aprender mas n tenho amigos para jogar entao quem quiser jogar e me ensinar estamos ai kkkkkkkk',
+    crestIcon: 'Users',
+    bannerImage: 'https://images.unsplash.com/photo-1507413245164-6160d8298b31?q=80&w=800&auto=format&fit=crop',
+    themeColor: '#b45309',
+    accessType: 'livre',
+    isVerified: false,
+    memberCount: 24,
+    campaignsCount: 0,
+    leaderId: 'leader-novato',
+    leaderName: 'Player1',
+    rules: 'Paciência com novatos e foco no aprendizado.',
     isMember: false
   }
 ];
@@ -631,7 +898,15 @@ export class StorageService {
       return INITIAL_CAMPAIGNS;
     }
     try {
-      return JSON.parse(raw);
+      const parsed: Campaign[] = JSON.parse(raw);
+      if (!parsed.some(c => c.id === 'camp-test-mapping')) {
+        const foundTest = INITIAL_CAMPAIGNS.find(c => c.id === 'camp-test-mapping');
+        if (foundTest) {
+          parsed.unshift(foundTest);
+          this.saveCampaigns(parsed);
+        }
+      }
+      return parsed;
     } catch {
       return INITIAL_CAMPAIGNS;
     }
@@ -663,7 +938,12 @@ export class StorageService {
       return INITIAL_GUILDS;
     }
     try {
-      return JSON.parse(raw);
+      const parsed: Guild[] = JSON.parse(raw);
+      if (!parsed.some(g => g.id === 'guild-darkage')) {
+        this.saveGuilds(INITIAL_GUILDS);
+        return INITIAL_GUILDS;
+      }
+      return parsed;
     } catch {
       return INITIAL_GUILDS;
     }

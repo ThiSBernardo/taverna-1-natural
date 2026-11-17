@@ -12,12 +12,12 @@ import { ItemEditorModal } from './components/characters/ItemEditorModal';
 import { AbilityEditorModal } from './components/characters/AbilityEditorModal';
 import { CampaignList } from './components/campaigns/CampaignList';
 import { CampaignWizardModal } from './components/campaigns/CampaignWizardModal';
-import { CampaignDetailModal } from './components/campaigns/CampaignDetailModal';
+import { CampaignDetailView } from './components/campaigns/CampaignDetailView';
 import { VttSessionModal } from './components/campaigns/VttSessionModal';
 import { InviteModal } from './components/campaigns/InviteModal';
 import { DiscoverView } from './components/discover/DiscoverView';
 import { GuildsView } from './components/guilds/GuildsView';
-import { ShopView } from './components/shop/ShopView';
+import { GameEntryView } from './components/game/GameEntryView';
 import { LibraryModal } from './components/library/LibraryModal';
 import { PublicProfileModal, PublicPlayerProfile } from './components/library/PublicProfileModal';
 import { DiceOverlay } from './components/dice/DiceOverlay';
@@ -29,7 +29,6 @@ import { UserProfile, UserStatus } from './types/user';
 import { Character } from './types/character';
 import { Campaign } from './types/campaign';
 import { Guild } from './types/guild';
-import { ShopItem } from './types/shop';
 import { DiceRollResult } from './types/dice';
 import { RPGSystemId } from './types/rpg-systems';
 import { CharacterItem } from './types/items';
@@ -37,7 +36,8 @@ import { CharacterAbility } from './types/abilities';
 
 export const App: React.FC = () => {
   const queryParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
-  const paramRoute = queryParams.get('route') as MainNavRoute | null;
+  const rawParamRoute = queryParams.get('route');
+  const paramRoute = (rawParamRoute === 'campanhas' || rawParamRoute === 'descubra' || rawParamRoute === 'guildas') ? (rawParamRoute as MainNavRoute) : null;
   const paramModal = queryParams.get('modal');
   const paramStep = queryParams.get('step') ? parseInt(queryParams.get('step')!, 10) : 1;
   const paramTab = queryParams.get('tab') as 'attacks' | 'abilities' | 'inventory' | 'skills' | 'stats' | 'bio' | null;
@@ -49,8 +49,10 @@ export const App: React.FC = () => {
   const [characters, setCharacters] = useState<Character[]>(StorageService.getCharacters());
   const [campaigns, setCampaigns] = useState<Campaign[]>(StorageService.getCampaigns());
   const [guilds, setGuilds] = useState<Guild[]>(StorageService.getGuilds());
-  const [shopItems, setShopItems] = useState<ShopItem[]>(StorageService.getShopItems());
   const [recentRolls, setRecentRolls] = useState<DiceRollResult[]>(StorageService.getDiceRolls());
+
+  const [showGameEntry, setShowGameEntry] = useState(rawParamRoute === 'game_entry' || paramModal === 'game_entry');
+  const [entryCampaign, setEntryCampaign] = useState<Campaign | null>(null);
 
   const [showProfileModal, setShowProfileModal] = useState(paramModal === 'profile');
   const [showFriendsDrawer, setShowFriendsDrawer] = useState(paramModal === 'friends');
@@ -80,7 +82,18 @@ export const App: React.FC = () => {
 
   // Campaign flows
   const [showCampaignWizardModal, setShowCampaignWizardModal] = useState(false);
-  const [activeCampaign, setActiveCampaign] = useState<Campaign | null>(null);
+  const [activeCampaign, setActiveCampaign] = useState<Campaign | null>(() => {
+    const list = StorageService.getCampaigns();
+    const campParam = queryParams.get('campaign');
+    if (campParam) {
+      const match = list.find(c => c.id === campParam || c.title.toLowerCase().includes(campParam.toLowerCase()));
+      if (match) return match;
+    }
+    if (paramModal === 'campaign') {
+      return list.find(c => c.id === 'camp-test-mapping') || list[0] || null;
+    }
+    return null;
+  });
   const [showVttSessionModal, setShowVttSessionModal] = useState(false);
 
   // Active Dice Overlay
@@ -192,22 +205,6 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleBuyItem = (item: ShopItem) => {
-    if (user.coins >= item.priceCoins) {
-      const updatedUser = { ...user, coins: user.coins - item.priceCoins };
-      handleUpdateUser(updatedUser);
-      showToast(`Parabéns! Você adquiriu "${item.title}" por ${item.priceCoins} moedas.`);
-    } else {
-      showToast(`Saldo insuficiente! Você tem ${user.coins} moedas e o item custa ${item.priceCoins}.`);
-    }
-  };
-
-  const handleUpgradePlan = (planId: 'explorador' | 'duque' | 'arquiduque') => {
-    const updatedUser = { ...user, plan: planId };
-    handleUpdateUser(updatedUser);
-    showToast(`Parabéns! Sua assinatura foi atualizada para o plano ${planId.toUpperCase()}. Todos os benefícios estão ativos!`);
-  };
-
   return (
     <div className={`min-h-screen bg-[#0b0e14] text-gray-100 flex flex-col font-sans overflow-x-hidden ${user.uiStyle === 'opaque' ? 'ui-opaque' : ''}`}>
       
@@ -224,84 +221,90 @@ export const App: React.FC = () => {
         </div>
       )}
       
-      {/* GLOBAL TOP HEADER */}
-      <Header
-        user={user}
-        currentRoute={currentRoute}
-        onRouteChange={(route) => setCurrentRoute(route)}
-        onOpenCreateMenu={() => setShowCreateMenuModal(true)}
-        onOpenProfile={() => setShowProfileModal(true)}
-        onOpenFriends={() => setShowFriendsDrawer(true)}
-        onOpenShop={() => setCurrentRoute('loja')}
-        onOpenLibrary={() => setShowLibraryModal(true)}
-        onOpenChangelog={() => setShowChangelogModal(true)}
-        onNavigateHome={() => setCurrentRoute('campanhas')}
-      />
-
-      {/* MAIN VIEW ROUTER */}
-      <main className="flex-1">
-        {currentRoute === 'campanhas' && (
-          <CampaignList
-            campaigns={campaigns}
-            currentUserId={user.id}
-            onOpenCampaignDetail={(camp) => setActiveCampaign(camp)}
-            onOpenCreateCampaign={() => setShowCampaignWizardModal(true)}
-            onOpenInviteModal={() => setShowInviteModal(true)}
-            onNavigateToDiscover={() => setCurrentRoute('descubra')}
-            onSelectSystemForCharacter={(sysId) => {
-              setWizardSystemId(sysId);
-              setShowCharacterWizardModal(true);
-            }}
-          />
-        )}
-
-        {currentRoute === 'descubra' && (
-          <DiscoverView
-            campaigns={campaigns}
+      {showGameEntry ? (
+        <GameEntryView
+          campaign={entryCampaign || campaigns[0]}
+          onEnterGame={(camp) => {
+            setShowGameEntry(false);
+            setActiveCampaign(camp);
+            setShowVttSessionModal(true);
+          }}
+          onBack={() => setShowGameEntry(false)}
+          onOpenLibrary={() => setShowLibraryModal(true)}
+        />
+      ) : (
+        <>
+          <Header
             user={user}
-            onOpenCampaignDetail={(camp) => setActiveCampaign(camp)}
-            onRequestJoinCampaign={(camp) => {
-              handleJoinInviteCode(camp.inviteCode);
-              showToast(`Solicitação enviada para a mesa "${camp.title}"!`);
-            }}
-            onAddFriend={(code) => {
-              showToast(`Solicitação de amizade enviada para o código ${code}!`);
-            }}
-            onOpenPublicProfile={(code) => {
-              setActivePublicProfile(StorageService.getPublicProfile(code));
-            }}
+            currentRoute={currentRoute}
+            onRouteChange={(route) => setCurrentRoute(route)}
+            onOpenCreateMenu={() => setShowCreateMenuModal(true)}
+            onOpenProfile={() => setShowProfileModal(true)}
+            onOpenFriends={() => setShowFriendsDrawer(true)}
+            onOpenLibrary={() => setShowLibraryModal(true)}
+            onOpenChangelog={() => setShowChangelogModal(true)}
+            onNavigateHome={() => setCurrentRoute('campanhas')}
           />
-        )}
 
-        {currentRoute === 'guildas' && (
-          <GuildsView
-            guilds={guilds}
-            currentUserId={user.id}
-            onJoinGuild={(guildId) => {
-              const updated = guilds.map(g => g.id === guildId ? { ...g, isMember: true, memberCount: g.memberCount + 1 } : g);
-              setGuilds(updated);
-              StorageService.saveGuilds(updated);
-              showToast('Você ingressou na guilda com sucesso!');
-            }}
-            onCreateGuild={(newGuild) => {
-              const updated = [newGuild, ...guilds];
-              setGuilds(updated);
-              StorageService.saveGuilds(updated);
-              showToast(`Guilda [${newGuild.tag}] ${newGuild.name} fundada com sucesso!`);
-            }}
-          />
-        )}
+          <main className="flex-1">
+            {currentRoute === 'campanhas' && (
+              <CampaignList
+                campaigns={campaigns}
+                currentUserId={user.id}
+                onOpenCampaignDetail={(camp) => setActiveCampaign(camp)}
+                onEnterGame={(camp) => {
+                  setEntryCampaign(camp);
+                  setShowGameEntry(true);
+                }}
+                onOpenCreateCampaign={() => setShowCampaignWizardModal(true)}
+                onOpenInviteModal={() => setShowInviteModal(true)}
+                onNavigateToDiscover={() => setCurrentRoute('descubra')}
+                onSelectSystemForCharacter={(sysId) => {
+                  setWizardSystemId(sysId);
+                  setShowCharacterWizardModal(true);
+                }}
+              />
+            )}
 
-        {currentRoute === 'loja' && (
-          <ShopView
-            items={shopItems}
-            userCoins={user.coins}
-            userPlan={user.plan}
-            onBuyItem={handleBuyItem}
-            onUpgradePlan={handleUpgradePlan}
-          />
-        )}
-      </main>
+            {currentRoute === 'descubra' && (
+              <DiscoverView
+                campaigns={campaigns}
+                user={user}
+                onOpenCampaignDetail={(camp) => setActiveCampaign(camp)}
+                onRequestJoinCampaign={(camp) => {
+                  handleJoinInviteCode(camp.inviteCode);
+                  showToast(`Solicitação enviada para a mesa "${camp.title}"!`);
+                }}
+                onAddFriend={(code) => {
+                  showToast(`Solicitação de amizade enviada para o código ${code}!`);
+                }}
+                onOpenPublicProfile={(code) => {
+                  setActivePublicProfile(StorageService.getPublicProfile(code));
+                }}
+              />
+            )}
+
+            {currentRoute === 'guildas' && (
+              <GuildsView
+                guilds={guilds}
+                currentUserId={user.id}
+                onJoinGuild={(guildId) => {
+                  const updated = guilds.map(g => g.id === guildId ? { ...g, isMember: true, memberCount: g.memberCount + 1 } : g);
+                  setGuilds(updated);
+                  StorageService.saveGuilds(updated);
+                  showToast('Você ingressou na guilda com sucesso!');
+                }}
+                onCreateGuild={(newGuild) => {
+                  const updated = [newGuild, ...guilds];
+                  setGuilds(updated);
+                  StorageService.saveGuilds(updated);
+                  showToast(`Guilda [${newGuild.tag}] ${newGuild.name} fundada com sucesso!`);
+                }}
+              />
+            )}
+          </main>
+        </>
+      )}
 
       {/* FRIENDS DRAWER */}
       <FriendsDrawer
@@ -367,7 +370,8 @@ export const App: React.FC = () => {
           StorageService.saveCharacter(newChar);
           setCharacters(StorageService.getCharacters());
           setShowCharacterWizardModal(false);
-          setActiveCharacter(newChar);
+          setActiveCharacter(null);
+          setShowLibraryModal(true);
         }}
       />
 
@@ -447,19 +451,18 @@ export const App: React.FC = () => {
         }}
       />
 
-      {/* CAMPAIGN DETAIL MODAL */}
       {activeCampaign && !showVttSessionModal && (
-        <CampaignDetailModal
-          isOpen={!!activeCampaign}
+        <CampaignDetailView
           campaign={activeCampaign}
           currentUserId={user.id}
+          initialTab={queryParams.get('tab') === 'calendar' ? 'calendar' : (queryParams.get('tab') === 'chronicle' ? 'chronicle' : 'overview')}
           onClose={() => setActiveCampaign(null)}
           onUpdateCampaign={handleUpdateCampaign}
-          onOpenCharacterSheet={(charId) => {
+          onOpenCharacterSheet={(charId: string) => {
             const char = StorageService.getCharacterById(charId);
             if (char) setActiveCharacter(char);
           }}
-          onLaunchVtt={(camp) => {
+          onLaunchVtt={(_camp: Campaign) => {
             setShowVttSessionModal(true);
           }}
         />
@@ -487,18 +490,33 @@ export const App: React.FC = () => {
       <LibraryModal
         isOpen={showLibraryModal}
         characters={characters}
-        userCode={user.friendCode}
+        user={user}
+        campaigns={campaigns}
+        recentRollsCount={recentRolls.length}
         onClose={() => setShowLibraryModal(false)}
         onOpenCharacterSheet={(char) => {
-          setShowLibraryModal(false);
           setActiveCharacter(char);
         }}
         onStartCreateCharacter={() => {
           setShowLibraryModal(false);
           setShowSystemSelectorModal(true);
         }}
-        onCloneCharacter={handleCloneCharacter}
-        onDeleteCharacter={handleDeleteCharacter}
+        onOpenProfile={() => {
+          setShowProfileModal(true);
+        }}
+        onOpenShop={() => {
+          setShowProfileModal(true);
+        }}
+        onOpenPublicProfile={() => {
+          setActivePublicProfile(StorageService.getPublicProfile());
+        }}
+        onOpenCreateCampaign={() => {
+          setShowLibraryModal(false);
+          setShowCampaignWizardModal(true);
+        }}
+        onOpenCampaignDetail={(camp) => {
+          setActiveCampaign(camp);
+        }}
       />
 
       {/* CHANGELOG MODAL */}

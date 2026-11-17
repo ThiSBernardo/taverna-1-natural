@@ -1,7 +1,7 @@
 import React from 'react';
-import { Home, Compass, Plus, Shield, ShoppingBag } from 'lucide-react';
+import { Home, Compass, Plus, Bookmark } from 'lucide-react';
 
-export type MainNavRoute = 'campanhas' | 'descubra' | 'guildas' | 'loja';
+export type MainNavRoute = 'campanhas' | 'descubra' | 'guildas';
 
 interface BottomNavProps {
   currentRoute: MainNavRoute;
@@ -64,21 +64,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               : 'text-gray-400 hover:text-gray-200'
           }`}
         >
-          <Shield className="w-5 h-5" />
+          <Bookmark className="w-5 h-5" />
           <span className="text-[10px] tracking-wide font-inter">Guildas</span>
-        </button>
-
-        {/* Loja */}
-        <button
-          onClick={() => onRouteChange('loja')}
-          className={`flex flex-col items-center gap-1 flex-1 py-1 transition-all ${
-            currentRoute === 'loja' 
-              ? 'text-purple-300 font-medium scale-105 drop-shadow-[0_0_8px_rgba(124,58,237,0.5)]' 
-              : 'text-gray-400 hover:text-gray-200'
-          }`}
-        >
-          <ShoppingBag className="w-5 h-5" />
-          <span className="text-[10px] tracking-wide font-inter">Loja</span>
         </button>
 
       </nav>

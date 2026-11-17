@@ -3,16 +3,18 @@ export type GuildAccessType = 'livre' | 'aprovacao' | 'convite';
 export interface Guild {
   id: string;
   name: string;
-  tag: string; // 2 to 6 uppercase letters, e.g. "ORDEM", "VANG"
+  tag: string;
   description: string;
-  crestIcon: string;
+  crestIcon?: string;
+  avatarUrl?: string;
   bannerImage?: string;
-  themeColor: string; // Hex color
+  themeColor: string;
   accessType: GuildAccessType;
   isVerified: boolean;
   memberCount: number;
+  campaignsCount?: number;
   leaderId: string;
   leaderName: string;
-  rules: string;
+  rules?: string;
   isMember?: boolean;
 }

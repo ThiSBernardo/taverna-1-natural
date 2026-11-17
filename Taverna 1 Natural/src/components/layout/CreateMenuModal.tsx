@@ -99,7 +99,7 @@ export const CreateMenuModal: React.FC<CreateMenuModalProps> = ({
               Monte uma mesa, convide seu grupo e conduza a história.
             </p>
             <div className="text-[11px] text-slate-500 font-medium">
-              2 de 3 disponíveis no seu plano
+              Campanhas ativas
             </div>
           </button>
 
