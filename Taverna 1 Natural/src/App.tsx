@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Loader2, Castle } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
+import { AuthView, AuthMode } from './components/auth/AuthView';
 import { Header, MainNavRoute } from './components/layout/Header';
 import { FriendsDrawer } from './components/layout/FriendsDrawer';
 import { ProfileModal } from './components/layout/ProfileModal';
@@ -21,6 +23,7 @@ import { GameEntryView } from './components/game/GameEntryView';
 import { LibraryModal } from './components/library/LibraryModal';
 import { PublicProfileModal, PublicPlayerProfile } from './components/library/PublicProfileModal';
 import { DiceOverlay } from './components/dice/DiceOverlay';
+import { DicePrototypeView } from './components/dice/DicePrototypeView';
 
 import { StorageService } from './services/storage.service';
 import { DiceRollerService } from './services/dice-roller.service';
@@ -35,6 +38,8 @@ import { CharacterItem } from './types/items';
 import { CharacterAbility } from './types/abilities';
 
 export const App: React.FC = () => {
+  const { user: authProfile, isLoading, isAuthenticated, logout } = useAuth();
+
   const queryParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const rawParamRoute = queryParams.get('route');
   const paramRoute = (rawParamRoute === 'campanhas' || rawParamRoute === 'descubra' || rawParamRoute === 'guildas') ? (rawParamRoute as MainNavRoute) : null;
@@ -42,6 +47,9 @@ export const App: React.FC = () => {
   const paramStep = queryParams.get('step') ? parseInt(queryParams.get('step')!, 10) : 1;
   const paramTab = queryParams.get('tab') as 'attacks' | 'abilities' | 'inventory' | 'skills' | 'stats' | 'bio' | null;
   const paramSystem = (queryParams.get('system') as RPGSystemId) || 'ordem-paranormal';
+
+  const authModeParam = queryParams.get('auth') || queryParams.get('mode');
+  const initialAuthMode: AuthMode = (authModeParam === 'register' || authModeParam === 'forgot-password') ? authModeParam : 'login';
 
   const [currentRoute, setCurrentRoute] = useState<MainNavRoute>(paramRoute || 'campanhas');
 
@@ -60,6 +68,7 @@ export const App: React.FC = () => {
   const [showCreateMenuModal, setShowCreateMenuModal] = useState(paramModal === 'create');
   const [showInviteModal, setShowInviteModal] = useState(paramModal === 'invite');
   const [showLibraryModal, setShowLibraryModal] = useState(paramModal === 'library');
+  const [showDice3DModal, setShowDice3DModal] = useState(rawParamRoute === 'dice3d' || paramModal === 'dice3d');
 
   const [showSystemSelectorModal, setShowSystemSelectorModal] = useState(paramModal === 'system');
   const [showCharacterWizardModal, setShowCharacterWizardModal] = useState(paramModal === 'wizard');
@@ -74,13 +83,11 @@ export const App: React.FC = () => {
   );
   const [appToast, setAppToast] = useState<string | null>(null);
 
-  // Item & Ability editors
   const [showItemEditorModal, setShowItemEditorModal] = useState(false);
   const [editingItem, setEditingItem] = useState<CharacterItem | undefined>(undefined);
   const [showAbilityEditorModal, setShowAbilityEditorModal] = useState(false);
   const [editingAbility, setEditingAbility] = useState<CharacterAbility | undefined>(undefined);
 
-  // Campaign flows
   const [showCampaignWizardModal, setShowCampaignWizardModal] = useState(false);
   const [activeCampaign, setActiveCampaign] = useState<Campaign | null>(() => {
     const list = StorageService.getCampaigns();
@@ -98,15 +105,12 @@ export const App: React.FC = () => {
     rawParamRoute === 'mesa' || paramModal === 'vtt' || paramModal === 'mesa'
   );
 
-  // Active Dice Overlay
   const [activeRoll, setActiveRoll] = useState<DiceRollResult | null>(null);
 
-  // Apply custom theme CSS variables from user profile
   useEffect(() => {
     document.documentElement.style.setProperty('--accent', user.accentColor);
   }, [user.accentColor]);
 
-  // Dice roll handler
   const handleRollDice = (
     formula: string,
     title: string,
@@ -129,13 +133,11 @@ export const App: React.FC = () => {
     setActiveRoll(rollResult);
   };
 
-  // User Profile Update
   const handleUpdateUser = (updated: UserProfile) => {
     setUser(updated);
     StorageService.saveUser(updated);
   };
 
-  // Character Save / Update
   const handleUpdateCharacter = (updated: Character) => {
     StorageService.saveCharacter(updated);
     setCharacters(StorageService.getCharacters());
@@ -207,6 +209,47 @@ export const App: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (authProfile) {
+      setUser(prev => ({
+        ...prev,
+        displayName: authProfile.displayName || prev.displayName,
+        email: authProfile.email || prev.email,
+        avatarUrl: authProfile.photoURL || prev.avatarUrl
+      }));
+    }
+  }, [authProfile]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#08080a] text-white selection:bg-purple-500/30">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shadow-[0_0_30px_rgba(139,92,246,0.2)]">
+            <Castle className="w-7 h-7 animate-pulse text-purple-300" />
+          </div>
+          <div className="flex items-center gap-2.5 text-sm text-gray-300">
+            <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+            <span className="font-cinzel tracking-wider text-sm font-semibold">Carregando Taverna 1 Natural...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (rawParamRoute === 'dice3d' || paramModal === 'dice3d' || showDice3DModal) {
+    return (
+      <DicePrototypeView onClose={() => setShowDice3DModal(false)} />
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <AuthView
+        initialMode={initialAuthMode}
+      />
+    );
+  }
+
   return (
     <div className={`min-h-screen bg-[#0b0e14] text-gray-100 flex flex-col font-sans overflow-x-hidden ${user.uiStyle === 'opaque' ? 'ui-opaque' : ''}`}>
       
@@ -246,6 +289,8 @@ export const App: React.FC = () => {
             onOpenLibrary={() => setShowLibraryModal(true)}
             onOpenChangelog={() => setShowChangelogModal(true)}
             onNavigateHome={() => setCurrentRoute('campanhas')}
+            onLogout={logout}
+            onOpenDice3D={() => setShowDice3DModal(true)}
           />
 
           <main className="flex-1">
@@ -308,7 +353,6 @@ export const App: React.FC = () => {
         </>
       )}
 
-      {/* FRIENDS DRAWER */}
       <FriendsDrawer
         isOpen={showFriendsDrawer}
         onClose={() => setShowFriendsDrawer(false)}
@@ -316,16 +360,16 @@ export const App: React.FC = () => {
         onUpdateStatus={(st: UserStatus) => handleUpdateUser({ ...user, status: st })}
       />
 
-      {/* USER PROFILE MODAL */}
       <ProfileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
         user={user}
         onSaveUser={handleUpdateUser}
         onTestRoll={handleRollDice}
+        onLogout={logout}
+        isProfileInMemory={Boolean(authProfile?.isInMemory)}
       />
 
-      {/* CREATE MENU MODAL (Triggered by bottom "+") */}
       <CreateMenuModal
         isOpen={showCreateMenuModal}
         onClose={() => setShowCreateMenuModal(false)}
@@ -347,7 +391,6 @@ export const App: React.FC = () => {
         onJoinInviteCode={handleJoinInviteCode}
       />
 
-      {/* SYSTEM SELECTOR MODAL */}
       <SystemSelectorModal
         isOpen={showSystemSelectorModal}
         onClose={() => setShowSystemSelectorModal(false)}
@@ -362,7 +405,6 @@ export const App: React.FC = () => {
         }}
       />
 
-      {/* CHARACTER CREATION WIZARD MODAL (5 STEPS) */}
       <CharacterWizardModal
         isOpen={showCharacterWizardModal}
         systemId={wizardSystemId}
@@ -396,7 +438,6 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* ITEM EDITOR MODAL */}
       <ItemEditorModal
         isOpen={showItemEditorModal}
         initialItem={editingItem}
@@ -417,7 +458,6 @@ export const App: React.FC = () => {
         }}
       />
 
-      {/* ABILITY EDITOR MODAL */}
       <AbilityEditorModal
         isOpen={showAbilityEditorModal}
         initialAbility={editingAbility}
@@ -438,7 +478,6 @@ export const App: React.FC = () => {
         }}
       />
 
-      {/* CAMPAIGN CREATION WIZARD MODAL */}
       <CampaignWizardModal
         isOpen={showCampaignWizardModal}
         currentUserId={user.id}
@@ -470,7 +509,6 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* VTT SESSION MODAL */}
       {activeCampaign && showVttSessionModal && (
         <VttSessionModal
           isOpen={showVttSessionModal}
@@ -481,14 +519,12 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* INVITE MODAL */}
       <InviteModal
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
         onJoinInviteCode={handleJoinInviteCode}
       />
 
-      {/* USER LIBRARY MODAL */}
       <LibraryModal
         isOpen={showLibraryModal}
         characters={characters}
@@ -521,13 +557,11 @@ export const App: React.FC = () => {
         }}
       />
 
-      {/* CHANGELOG MODAL */}
       <ChangelogModal
         isOpen={showChangelogModal}
         onClose={() => setShowChangelogModal(false)}
       />
 
-      {/* PUBLIC PROFILE MODAL */}
       <PublicProfileModal
         isOpen={!!activePublicProfile}
         profile={activePublicProfile}
@@ -535,11 +569,14 @@ export const App: React.FC = () => {
         onAddFriend={(code) => showToast(`Solicitação de amizade enviada para ${code}!`)}
       />
 
-      {/* REAL-TIME 3D DICE OVERLAY */}
       <DiceOverlay
         roll={activeRoll}
         onClose={() => setActiveRoll(null)}
       />
+
+      {showDice3DModal && (
+        <DicePrototypeView onClose={() => setShowDice3DModal(false)} />
+      )}
 
     </div>
   );

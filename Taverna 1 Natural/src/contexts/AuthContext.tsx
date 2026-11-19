@@ -10,11 +10,13 @@ export interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   isFirebaseConfigured: boolean;
+  isProfileInMemory: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (displayName: string, email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
+  syncPendingProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,7 +27,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    let isMounted = true;
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) {
+        setIsLoading(false);
+      }
+    }, 600);
+
     const unsubscribe = AuthService.subscribeAuthState(async (current) => {
+      if (!isMounted) return;
+      clearTimeout(safetyTimer);
       setFirebaseUser(current);
       if (current) {
         try {
@@ -43,7 +54,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             email: current.email || '',
             photoURL: current.photoURL,
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            isInMemory: true
           });
         }
       } else {
@@ -52,7 +64,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      clearTimeout(safetyTimer);
+      unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -109,17 +125,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const syncPendingProfile = async () => {
+    if (!user || !user.isInMemory) return;
+    try {
+      const recovered = await UserService.recoverPendingProfile(user);
+      setUser(recovered);
+    } catch {}
+  };
+
   const value: AuthContextType = {
     user,
     firebaseUser,
     isLoading,
     isAuthenticated: Boolean(firebaseUser),
     isFirebaseConfigured,
+    isProfileInMemory: Boolean(user?.isInMemory),
     login,
     register,
     resetPassword,
     logout,
-    loginWithGoogle
+    loginWithGoogle,
+    syncPendingProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

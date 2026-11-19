@@ -4,9 +4,13 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow create: if request.auth != null && request.auth.uid == userId
-                    && request.resource.data.uid == userId;
+                    && request.resource.data.uid == userId
+                    && request.resource.data.email is string
+                    && request.resource.data.createdAt is string;
       allow update: if request.auth != null && request.auth.uid == userId
-                    && request.resource.data.uid == userId;
+                    && request.resource.data.uid == resource.data.uid
+                    && request.resource.data.createdAt == resource.data.createdAt
+                    && request.resource.data.email == resource.data.email;
       allow delete: if false;
     }
 

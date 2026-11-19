@@ -10,8 +10,8 @@ import {
   onAuthStateChanged,
   Unsubscribe
 } from 'firebase/auth';
-import { auth } from './config';
-import { UserService, UserDocument } from './user.service';
+import { auth, isFirebaseConfigured } from './config.js';
+import { UserService, UserDocument } from './user.service.js';
 
 export class AuthService {
   static formatAuthError(error: unknown): string {
@@ -29,6 +29,10 @@ export class AuthService {
           return 'A senha é muito fraca. Utilize no mínimo 6 caracteres.';
         case 'auth/invalid-email':
           return 'O endereço de e-mail informado é inválido.';
+        case 'auth/missing-password':
+          return 'Por favor, informe a senha.';
+        case 'auth/missing-email':
+          return 'Por favor, informe o e-mail.';
         case 'auth/too-many-requests':
           return 'Acesso bloqueado temporariamente por excesso de tentativas. Tente mais tarde.';
         case 'auth/network-request-failed':
@@ -39,6 +43,9 @@ export class AuthService {
           return 'Operação cancelada pelo navegador.';
         case 'auth/operation-not-allowed':
           return 'Este método de autenticação não está habilitado no Console Firebase.';
+        case 'auth/api-key-not-valid':
+        case 'auth/invalid-api-key':
+          return 'A chave de API do Firebase não está configurada ou é inválida no arquivo .env.';
         default:
           return 'Não foi possível completar a operação de autenticação.';
       }
@@ -51,10 +58,12 @@ export class AuthService {
 
   static async loginWithEmail(email: string, password: string): Promise<User> {
     const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
-    const existing = await UserService.getUserProfile(cred.user.uid);
-    if (!existing) {
-      await UserService.createUserProfile(cred.user);
-    }
+    try {
+      const existing = await UserService.getUserProfile(cred.user.uid);
+      if (!existing) {
+        await UserService.createUserProfile(cred.user);
+      }
+    } catch {}
     return cred.user;
   }
 
@@ -67,14 +76,29 @@ export class AuthService {
     const trimmedName = displayName.trim();
     const cred = await createUserWithEmailAndPassword(auth, trimmedEmail, password);
     if (trimmedName) {
-      await updateProfile(cred.user, { displayName: trimmedName });
+      try {
+        await updateProfile(cred.user, { displayName: trimmedName });
+      } catch {}
     }
-    const profile = await UserService.createUserProfile({
-      uid: cred.user.uid,
-      displayName: trimmedName,
-      email: trimmedEmail,
-      photoURL: cred.user.photoURL
-    });
+    let profile: UserDocument;
+    try {
+      profile = await UserService.createUserProfile({
+        uid: cred.user.uid,
+        displayName: trimmedName,
+        email: trimmedEmail,
+        photoURL: cred.user.photoURL
+      });
+    } catch {
+      profile = {
+        uid: cred.user.uid,
+        displayName: trimmedName || trimmedEmail.split('@')[0] || 'Aventureiro',
+        email: trimmedEmail,
+        photoURL: cred.user.photoURL,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isInMemory: true
+      };
+    }
     return { user: cred.user, profile };
   }
 
@@ -83,11 +107,29 @@ export class AuthService {
   }
 
   static async loginWithGoogle(): Promise<{ user: User; profile: UserDocument }> {
+    if (!isFirebaseConfigured) {
+      throw new Error('A autenticação com Google requer credenciais válidas do Firebase no arquivo .env.');
+    }
     const provider = new GoogleAuthProvider();
     const cred = await signInWithPopup(auth, provider);
-    const existing = await UserService.getUserProfile(cred.user.uid);
-    const profile = existing || (await UserService.createUserProfile(cred.user));
-    return { user: cred.user, profile };
+    let profile: UserDocument | null = null;
+    try {
+      profile = await UserService.getUserProfile(cred.user.uid);
+      if (!profile) {
+        profile = await UserService.createUserProfile(cred.user);
+      }
+    } catch {
+      profile = {
+        uid: cred.user.uid,
+        displayName: cred.user.displayName || cred.user.email?.split('@')[0] || 'Aventureiro',
+        email: cred.user.email || '',
+        photoURL: cred.user.photoURL,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isInMemory: true
+      };
+    }
+    return { user: cred.user, profile: profile! };
   }
 
   static async logoutUser(): Promise<void> {

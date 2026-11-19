@@ -8,10 +8,10 @@ import {
   Check, 
   Crown, 
   Copy, 
-  Sparkles,
-  ShieldCheck
+  AlertCircle,
+  LogOut
 } from 'lucide-react';
-import { UserProfile, UIStyleMode, DayAvailability } from '../../types/user';
+import { UserProfile, DayAvailability } from '../../types/user';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -19,6 +19,8 @@ interface ProfileModalProps {
   user: UserProfile;
   onSaveUser: (updatedUser: UserProfile) => void;
   onTestRoll: (formula: string, title: string) => void;
+  onLogout?: () => void;
+  isProfileInMemory?: boolean;
 }
 
 const PALETTES = [
@@ -52,6 +54,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   user,
   onSaveUser,
   onTestRoll,
+  onLogout,
+  isProfileInMemory = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'custom' | 'account' | 'card'>('custom');
   const [profile, setProfile] = useState<UserProfile>({ ...user });
@@ -93,7 +97,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
       <div className="glass-panel-elevated max-w-2xl w-full rounded-2xl p-6 relative animate-modal-in border border-white/10 shadow-2xl max-h-[90vh] flex flex-col">
         
-        {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
           <div className="flex items-center gap-3">
             <img 
@@ -113,7 +116,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Navigation */}
         <div className="flex gap-2 border-b border-white/10 py-3 text-xs">
           <button
             onClick={() => setActiveTab('custom')}
@@ -152,14 +154,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Content */}
         <div className="flex-1 overflow-y-auto py-4 space-y-5 pr-1">
-          
-          {/* TAB 1: CUSTOMIZAÇÃO */}
           {activeTab === 'custom' && (
             <div className="space-y-5 text-xs">
-              
-              {/* Estilo de Interface */}
               <div>
                 <label className="font-semibold text-gray-300 block mb-2">Estilo de Interface</label>
                 <div className="grid grid-cols-2 gap-3">
@@ -195,7 +192,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 </div>
               </div>
 
-              {/* 19 Paletas de Cor de Destaque */}
               <div>
                 <label className="font-semibold text-gray-300 block mb-2">
                   Cor de Destaque da Interface (19 Paletas)
@@ -222,7 +218,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 </div>
               </div>
 
-              {/* Ateliê de Dados 3D */}
               <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-950/40 via-black/50 to-indigo-950/40 border border-purple-500/30">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -254,13 +249,23 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   </button>
                 </div>
               </div>
-
             </div>
           )}
 
-          {/* TAB 2: DADOS DA CONTA */}
           {activeTab === 'account' && (
             <div className="space-y-4 text-xs">
+              {isProfileInMemory && (
+                <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-2.5 text-amber-200">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-xs text-amber-300">Perfil em Memória (Firestore Offline)</div>
+                    <div className="text-[11px] text-amber-200/80 mt-0.5">
+                      Os dados da sua conta estão ativos na sessão atual. A persistência em nuvem será concluída quando a conexão com o Firestore estiver ativa.
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="text-gray-400 block mb-1">Nome de Exibição</label>
                 <input
@@ -307,7 +312,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 </button>
               </div>
 
-              {/* Plano de Assinatura */}
               <div className="p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/5 flex items-center justify-between">
                 <div>
                   <div className="text-xs font-bold text-yellow-400 flex items-center gap-1">
@@ -317,10 +321,25 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   <div className="text-[11px] text-gray-400 mt-0.5">5 GB de armazenamento em nuvem e dados 3D ativos.</div>
                 </div>
               </div>
+
+              {onLogout && (
+                <div className="pt-2 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onLogout();
+                    }}
+                    className="w-full py-2.5 px-4 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Desconectar da Conta</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
-          {/* TAB 3: CARTÃO DE JOGADOR */}
           {activeTab === 'card' && (
             <div className="space-y-4 text-xs">
               <div>
@@ -333,7 +352,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 />
               </div>
 
-              {/* Matriz Semanal de Disponibilidade */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="font-semibold text-gray-300">
@@ -363,7 +381,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                               onClick={() => handleToggleShift(day, shift)}
                               className={`w-7 h-7 rounded-lg text-xs flex items-center justify-center transition-all ${
                                 isFree 
-                                  ? 'bg-purple-600 text-white font-bold shadow-md shadow-purple-600/40 border border-purple-400' 
+                                   ? 'bg-purple-600 text-white font-bold shadow-md shadow-purple-600/40 border border-purple-400' 
                                   : 'bg-white/5 text-gray-600 hover:bg-white/10'
                               }`}
                               title={`${day} - ${shift}`}
@@ -379,10 +397,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </div>
             </div>
           )}
-
         </div>
 
-        {/* Footer Actions */}
         <div className="pt-4 border-t border-white/10 flex items-center justify-between">
           <button 
             type="button" 

@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from './config';
+import { db } from './config.js';
 
 export interface UserDocument {
   uid: string;
@@ -8,6 +8,7 @@ export interface UserDocument {
   photoURL: string | null;
   createdAt: string;
   updatedAt: string;
+  isInMemory?: boolean;
 }
 
 export class UserService {
@@ -16,7 +17,11 @@ export class UserService {
       const docRef = doc(db, 'users', uid);
       const snapshot = await getDoc(docRef);
       if (snapshot.exists()) {
-        return snapshot.data() as UserDocument;
+        const data = snapshot.data() as UserDocument;
+        return {
+          ...data,
+          isInMemory: false
+        };
       }
       return null;
     } catch {
@@ -38,15 +43,58 @@ export class UserService {
       email: user.email || '',
       photoURL: user.photoURL || null,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      isInMemory: false
     };
-    await setDoc(docRef, profile, { merge: true });
+    try {
+      await setDoc(docRef, {
+        uid: profile.uid,
+        displayName: profile.displayName,
+        email: profile.email,
+        photoURL: profile.photoURL,
+        createdAt: profile.createdAt,
+        updatedAt: profile.updatedAt
+      }, { merge: true });
+    } catch {
+      profile.isInMemory = true;
+    }
     return profile;
+  }
+
+  static async recoverPendingProfile(profile: UserDocument): Promise<UserDocument> {
+    try {
+      const docRef = doc(db, 'users', profile.uid);
+      const snapshot = await getDoc(docRef);
+      if (snapshot.exists()) {
+        const cloudData = snapshot.data() as UserDocument;
+        return {
+          ...cloudData,
+          isInMemory: false
+        };
+      }
+      await setDoc(docRef, {
+        uid: profile.uid,
+        displayName: profile.displayName,
+        email: profile.email,
+        photoURL: profile.photoURL,
+        createdAt: profile.createdAt,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      return {
+        ...profile,
+        isInMemory: false
+      };
+    } catch {
+      return {
+        ...profile,
+        isInMemory: true
+      };
+    }
   }
 
   static async updateUserProfile(
     uid: string,
-    updates: Partial<Omit<UserDocument, 'uid' | 'createdAt'>>
+    updates: Partial<Omit<UserDocument, 'uid' | 'createdAt' | 'isInMemory'>>
   ): Promise<void> {
     const docRef = doc(db, 'users', uid);
     await updateDoc(docRef, {

@@ -21,6 +21,7 @@ import {
   BookOpen,
   Library,
   Plus,
+  Dices,
   Menu
 } from 'lucide-react';
 import { UserProfile } from '../../types/user';
@@ -38,6 +39,7 @@ export interface HeaderProps {
   onOpenChangelog: () => void;
   onNavigateHome: () => void;
   onLogout?: () => void;
+  onOpenDice3D?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -51,6 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenChangelog,
   onNavigateHome,
   onLogout,
+  onOpenDice3D,
 }) => {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
@@ -136,6 +139,17 @@ export const Header: React.FC<HeaderProps> = ({
                 <Zap className="w-3.5 h-3.5 fill-[#FFF8DC] text-[#FFF8DC] drop-shadow-[0_1px_1px_rgba(110,70,5,0.7)]" />
               </div>
             </div>
+
+            {onOpenDice3D && (
+              <button
+                type="button"
+                onClick={onOpenDice3D}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-purple-300 hover:text-white hover:bg-purple-900/30 flex items-center justify-center transition-colors cursor-pointer"
+                title="Motor de Dados 3D (Física Real)"
+              >
+                <Dices className="w-5 h-5" />
+              </button>
+            )}
 
             <button
               type="button"
