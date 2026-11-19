@@ -7,16 +7,17 @@ import {
   MessageSquare, 
   Dices, 
   ChevronRight,
-  ShieldAlert
+  Trash2,
+  Sparkles
 } from 'lucide-react';
 import { DiceRollResult } from '../../types/dice';
-import { Character } from '../../types/character';
 
 interface VttRightSidebarProps {
   participants: { id: string; name: string; avatar: string; role: 'master' | 'player'; isOnline: boolean }[];
   recentRolls: DiceRollResult[];
   onRollDice: (formula: string, title: string) => void;
   onSelectCharacterSheet?: (charId: string) => void;
+  onClearRolls?: () => void;
 }
 
 export const VttRightSidebar: React.FC<VttRightSidebarProps> = ({
@@ -24,6 +25,7 @@ export const VttRightSidebar: React.FC<VttRightSidebarProps> = ({
   recentRolls,
   onRollDice,
   onSelectCharacterSheet,
+  onClearRolls,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'players'>('chat');
@@ -54,26 +56,40 @@ export const VttRightSidebar: React.FC<VttRightSidebarProps> = ({
     setMessage('');
   };
 
+  const handleClearChat = () => {
+    setChatMessages([]);
+    if (onClearRolls) {
+      onClearRolls();
+    }
+  };
+
   return (
     <div className="fixed right-0 top-0 bottom-0 z-40 flex select-none pointer-events-auto">
-      
-      {/* EXPANDED DRAWER */}
       {isExpanded && (
         <div className="w-80 sm:w-96 bg-[#12111a]/96 backdrop-blur-2xl border-l border-white/[0.09] shadow-2xl flex flex-col justify-between overflow-hidden animate-slide-in-right">
-          
-          {/* Header & Tabs */}
           <div>
             <div className="h-12 px-4 border-b border-white/[0.08] flex items-center justify-between">
               <span className="font-cinzel text-xs font-bold text-white tracking-wide">
                 Painel da Mesa
               </span>
-              <button
-                type="button"
-                onClick={() => setIsExpanded(false)}
-                className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleClearChat}
+                  title="Limpar chat e histórico"
+                  className="px-2 py-1 rounded-lg text-[10px] font-spectral text-red-300 hover:text-white bg-red-950/30 hover:bg-red-900/40 border border-red-500/20 flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>Limpar chat</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsExpanded(false)}
+                  className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <div className="flex border-b border-white/[0.08] text-xs">
@@ -100,7 +116,6 @@ export const VttRightSidebar: React.FC<VttRightSidebarProps> = ({
             </div>
           </div>
 
-          {/* TAB 1: CHAT & ROLLS */}
           {activeTab === 'chat' && (
             <div className="flex-1 flex flex-col justify-between overflow-hidden p-3">
               <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
@@ -114,40 +129,81 @@ export const VttRightSidebar: React.FC<VttRightSidebarProps> = ({
                   </div>
                 ))}
 
-                {/* RECENT DICE ROLLS */}
-                {recentRolls.slice(0, 6).map(roll => (
+                {recentRolls.slice(0, 10).map(roll => (
                   <div
                     key={roll.id}
-                    className={`p-3 rounded-2xl border text-xs shadow-md ${
+                    className={`p-3 rounded-2xl border text-xs shadow-md transition-all ${
                       roll.isCritical
-                        ? 'border-yellow-500/60 bg-yellow-950/25 text-yellow-200'
+                        ? 'border-yellow-500/60 bg-yellow-950/25 text-yellow-200 shadow-[0_0_15px_rgba(234,179,8,0.15)]'
                         : roll.isFumble
-                          ? 'border-red-500/60 bg-red-950/25 text-red-200'
+                          ? 'border-red-500/60 bg-red-950/25 text-red-200 shadow-[0_0_15px_rgba(239,68,68,0.15)]'
                           : 'border-purple-500/40 bg-purple-950/20 text-purple-100'
                     }`}
                   >
                     <div className="flex items-center justify-between font-bold text-[11px] mb-1">
-                      <span>{roll.sourceTitle}</span>
+                      <span className="text-gray-200">{roll.rollerName || 'Jogador'}</span>
                       <span className="font-mono text-purple-300 text-[10px]">{roll.timestamp}</span>
                     </div>
 
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-[10px] text-gray-400 font-mono">Fórmula: {roll.formula}</span>
-                      <span className="font-cinzel text-base font-bold text-white">
+                    <div className="text-[10px] text-amber-200/70 font-spectral mb-1">
+                      {roll.sourceTitle}
+                    </div>
+
+                    <div className="flex items-baseline justify-between mt-1">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-gray-400 font-mono">
+                          {roll.formula}
+                        </span>
+                        {roll.diceResults && roll.diceResults.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1 mt-1">
+                            {roll.diceResults.map((dieRes, idx) => (
+                              <span
+                                key={idx}
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-mono border ${
+                                  dieRes.dropped
+                                    ? 'line-through opacity-40 text-gray-400 bg-white/[0.02] border-white/10'
+                                    : 'text-purple-200 bg-purple-900/30 border-purple-500/30 font-bold'
+                                }`}
+                                title={dieRes.dropped ? `d${dieRes.die}: ${dieRes.result} (Descartado)` : `d${dieRes.die}: ${dieRes.result}`}
+                              >
+                                {dieRes.result}
+                              </span>
+                            ))}
+                            {roll.modifierTotal !== 0 && (
+                              <span className="text-[10px] font-mono text-gray-300">
+                                {roll.modifierTotal > 0 ? `+ ${roll.modifierTotal}` : `- ${Math.abs(roll.modifierTotal)}`}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <span className="font-cinzel text-xl font-bold text-white tracking-wide">
                         {roll.total}
                       </span>
                     </div>
 
                     {roll.isCritical && (
-                      <div className="text-[10px] text-yellow-400 font-bold mt-1">
-                        ✨ ACERTO CRÍTICO!
+                      <div className="text-[10px] text-yellow-400 font-bold mt-1.5 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        <span>ACERTO CRÍTICO!</span>
+                      </div>
+                    )}
+
+                    {roll.isFumble && (
+                      <div className="text-[10px] text-red-400 font-bold mt-1.5">
+                        💀 FALHA CRÍTICA / DESASTRE
+                      </div>
+                    )}
+
+                    {roll.notes && (
+                      <div className="text-[9px] text-purple-300/80 font-spectral mt-1 italic">
+                        {roll.notes}
                       </div>
                     )}
                   </div>
                 ))}
               </div>
 
-              {/* Chat Input */}
               <form onSubmit={handleSendMessage} className="pt-2 border-t border-white/[0.08] flex gap-1.5">
                 <input
                   type="text"
@@ -166,7 +222,6 @@ export const VttRightSidebar: React.FC<VttRightSidebarProps> = ({
             </div>
           )}
 
-          {/* TAB 2: PLAYERS & COMBATANTS */}
           {activeTab === 'players' && (
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
               {participants.map(p => (
@@ -194,14 +249,10 @@ export const VttRightSidebar: React.FC<VttRightSidebarProps> = ({
               ))}
             </div>
           )}
-
         </div>
       )}
 
-      {/* PINNED VERTICAL STRIP ON RIGHT EDGE (Matches Screenshot 3 & 4) */}
       <div className="w-12 bg-[#14121b]/92 backdrop-blur-xl border-l border-white/[0.08] flex flex-col items-center justify-between py-4 text-gray-400">
-        
-        {/* TOP: MENU BUTTON */}
         <button
           type="button"
           onClick={() => setIsExpanded(prev => !prev)}
@@ -213,7 +264,6 @@ export const VttRightSidebar: React.FC<VttRightSidebarProps> = ({
           <span className="font-medium text-[8px] tracking-wider uppercase">Menu</span>
         </button>
 
-        {/* RECENT PLAYERS / ROLL TAGS */}
         <div className="flex flex-col items-center gap-4 my-auto">
           {recentRolls.slice(0, 2).map((roll, idx) => (
             <div key={idx} className="flex flex-col items-center gap-0.5">
@@ -249,7 +299,6 @@ export const VttRightSidebar: React.FC<VttRightSidebarProps> = ({
           )}
         </div>
 
-        {/* BOTTOM: QUICK D20 TRIGGER */}
         <button
           type="button"
           onClick={() => onRollDice('1d20', 'Rolagem Rápida d20')}
@@ -258,9 +307,7 @@ export const VttRightSidebar: React.FC<VttRightSidebarProps> = ({
         >
           <Dices className="w-4 h-4" />
         </button>
-
       </div>
-
     </div>
   );
 };

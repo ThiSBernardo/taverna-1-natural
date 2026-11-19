@@ -1,19 +1,22 @@
-import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
-import { DieInstance } from './types';
+import { DieInstance } from './types.js';
 
 export interface FaceDetectionResult {
   value: number;
+  displayValue: string;
   faceNormalY: number;
   isCocked: boolean;
+  isValid: boolean;
   bestFaceIndex: number;
 }
 
 export class FaceDetector {
   private static readonly UP = new CANNON.Vec3(0, 1, 0);
+  public static readonly ALIGNMENT_THRESHOLD = 0.94;
 
   static detectTopFace(die: DieInstance): FaceDetectionResult {
     let bestValue = 0;
+    let bestDisplayValue = '0';
     let maxDot = -Infinity;
     let bestFaceIndex = -1;
 
@@ -34,16 +37,20 @@ export class FaceDetector {
       if (dot > maxDot) {
         maxDot = dot;
         bestValue = mapping.value;
+        bestDisplayValue = mapping.displayValue || String(mapping.value);
         bestFaceIndex = i;
       }
     }
 
-    const isCocked = maxDot < 0.65;
+    const isCocked = maxDot < this.ALIGNMENT_THRESHOLD;
+    const isValid = !isCocked;
 
     return {
       value: bestValue,
+      displayValue: bestDisplayValue,
       faceNormalY: maxDot,
       isCocked,
+      isValid,
       bestFaceIndex,
     };
   }

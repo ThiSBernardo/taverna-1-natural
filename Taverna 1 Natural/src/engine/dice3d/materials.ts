@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { DiceTheme } from './types';
+import { DiceTheme } from './types.js';
 
 interface ThemeColors {
   background: string;
@@ -57,7 +57,11 @@ export class DiceMaterialFactory {
     return THEME_PRESETS[theme] || THEME_PRESETS.obsidian;
   }
 
-  static createFaceTexture(value: string | number, theme: DiceTheme, shape: 'triangle' | 'square' | 'pentagon' | 'circle' = 'triangle'): THREE.CanvasTexture {
+  static createFaceTexture(
+    value: string | number,
+    theme: DiceTheme,
+    shape: 'triangle' | 'square' | 'pentagon' | 'circle' | 'kite' = 'triangle'
+  ): THREE.CanvasTexture {
     const text = String(value);
     const cacheKey = `${theme}_${shape}_${text}`;
 
@@ -65,6 +69,11 @@ export class DiceMaterialFactory {
     if (cached) return cached;
 
     const size = 512;
+    if (typeof document === 'undefined') {
+      const texture = new THREE.CanvasTexture();
+      this.textureCache.set(cacheKey, texture);
+      return texture;
+    }
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
@@ -117,6 +126,14 @@ export class DiceMaterialFactory {
       ctx.beginPath();
       ctx.arc(0, 0, size * 0.4, 0, Math.PI * 2);
       ctx.stroke();
+    } else if (shape === 'kite') {
+      ctx.beginPath();
+      ctx.moveTo(0, -size * 0.42);
+      ctx.lineTo(size * 0.36, size * 0.04);
+      ctx.lineTo(0, size * 0.42);
+      ctx.lineTo(-size * 0.36, size * 0.04);
+      ctx.closePath();
+      ctx.stroke();
     } else {
       ctx.strokeRect(-size * 0.38, -size * 0.38, size * 0.76, size * 0.76);
     }
@@ -150,7 +167,11 @@ export class DiceMaterialFactory {
     return texture;
   }
 
-  static createMaterial(value: string | number, theme: DiceTheme, shape: 'triangle' | 'square' | 'pentagon' | 'circle' = 'triangle'): THREE.MeshStandardMaterial {
+  static createMaterial(
+    value: string | number,
+    theme: DiceTheme,
+    shape: 'triangle' | 'square' | 'pentagon' | 'circle' | 'kite' = 'triangle'
+  ): THREE.MeshStandardMaterial {
     const cfg = this.getThemeConfig(theme);
     const texture = this.createFaceTexture(value, theme, shape);
 
@@ -159,48 +180,61 @@ export class DiceMaterialFactory {
       color: 0xffffff,
       roughness: cfg.roughness,
       metalness: cfg.metalness,
-      bumpMap: texture,
-      bumpScale: 0.02,
     });
   }
 
   static createTrayFloorMaterial(): THREE.MeshStandardMaterial {
-    const size = 512;
+    if (typeof document === 'undefined') {
+      return new THREE.MeshStandardMaterial({
+        color: 0x110f17,
+        roughness: 0.88,
+        metalness: 0.05,
+      });
+    }
     const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
+    canvas.width = 512;
+    canvas.height = 512;
     const ctx = canvas.getContext('2d');
 
     if (ctx) {
-      const grad = ctx.createRadialGradient(size / 2, size / 2, size * 0.1, size / 2, size / 2, size * 0.7);
-      grad.addColorStop(0, '#15131d');
-      grad.addColorStop(1, '#09080d');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = '#110f17';
+      ctx.fillRect(0, 0, 512, 512);
 
-      ctx.strokeStyle = 'rgba(168, 85, 247, 0.08)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(20, 20, size - 40, size - 40);
-      ctx.strokeRect(35, 35, size - 70, size - 70);
+      const grad = ctx.createRadialGradient(256, 256, 80, 256, 256, 320);
+      grad.addColorStop(0, '#231c33');
+      grad.addColorStop(1, '#0e0c14');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 512, 512);
+
+      ctx.strokeStyle = 'rgba(168, 85, 247, 0.15)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(32, 32, 448, 448);
+      ctx.strokeRect(40, 40, 432, 432);
+
+      ctx.beginPath();
+      ctx.moveTo(256, 40);
+      ctx.lineTo(256, 472);
+      ctx.moveTo(40, 256);
+      ctx.lineTo(472, 256);
+      ctx.stroke();
     }
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(2, 2);
 
     return new THREE.MeshStandardMaterial({
       map: texture,
-      roughness: 0.85,
-      metalness: 0.1,
+      roughness: 0.88,
+      metalness: 0.05,
     });
   }
 
   static createTrayWallMaterial(): THREE.MeshStandardMaterial {
     return new THREE.MeshStandardMaterial({
-      color: 0x1a1824,
-      roughness: 0.5,
-      metalness: 0.35,
+      color: 0x171420,
+      roughness: 0.6,
+      metalness: 0.25,
     });
   }
 }

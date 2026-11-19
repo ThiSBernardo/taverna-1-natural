@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "tsc src/vite-env.d.ts src/services/dice-roller.service.ts src/services/character-rules.service.ts src/services/firebase/config.ts src/services/firebase/user.service.ts src/services/firebase/auth.service.ts --outDir test-dist --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck && node --test test/game-mechanics.test.mjs test/auth-integration.test.mjs"
+    "test": "tsc src/vite-env.d.ts src/services/dice-roller.service.ts src/services/character-rules.service.ts src/services/firebase/config.ts src/services/firebase/user.service.ts src/services/firebase/auth.service.ts src/services/storage.service.ts src/services/vtt-roll-messenger.service.ts src/engine/dice3d/types.ts src/engine/dice3d/materials.ts src/engine/dice3d/geometries.ts src/engine/dice3d/face-detector.ts --outDir test-dist --target ES2022 --module ESNext --moduleResolution bundler --skipLibCheck --jsx react-jsx && node --test test/game-mechanics.test.mjs test/auth-integration.test.mjs test/dice3d-engine.test.mjs test/vtt-roll-messenger.test.mjs"
   },
   "dependencies": {
     "cannon-es": "^0.20.0",

@@ -236,9 +236,35 @@ export const App: React.FC = () => {
     );
   }
 
-  if (rawParamRoute === 'dice3d' || paramModal === 'dice3d' || showDice3DModal) {
+  if (showDice3DModal) {
     return (
-      <DicePrototypeView onClose={() => setShowDice3DModal(false)} />
+      <DicePrototypeView
+        onClose={() => {
+          setShowDice3DModal(false);
+          const url = new URL(window.location.href);
+          url.searchParams.delete('modal');
+          url.searchParams.delete('route');
+          window.history.replaceState(null, '', url.pathname + (url.search ? url.search : ''));
+        }}
+      />
+    );
+  }
+
+  if (showVttSessionModal) {
+    return (
+      <VttSessionModal
+        isOpen={true}
+        campaign={activeCampaign || campaigns[0]}
+        onClose={() => {
+          setShowVttSessionModal(false);
+          const url = new URL(window.location.href);
+          url.searchParams.delete('modal');
+          url.searchParams.delete('route');
+          window.history.replaceState(null, '', url.pathname + (url.search ? url.search : ''));
+        }}
+        onRollDice={handleRollDice}
+        recentRolls={recentRolls}
+      />
     );
   }
 

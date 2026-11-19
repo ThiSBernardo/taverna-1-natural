@@ -4,38 +4,58 @@ import {
   Palette, 
   ChevronDown, 
   ChevronUp, 
-  Dices,
-  Sparkles
+  Sparkles,
+  AlertTriangle,
+  Play
 } from 'lucide-react';
 
-export type DiceType = 'moeda' | 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20';
+export type DiceType = 'moeda' | 'd4' | 'd6' | 'd8' | 'd10' | 'd12' | 'd20' | 'd100';
 export type RollMode = 'normal' | 'vantagem' | 'desvantagem';
+export type DiceTheme = 'obsidian' | 'gold' | 'blood' | 'amethyst';
 
 interface VttDiceTrayProps {
-  onRoll: (formula: string, title: string, options?: { mode?: 'normal' | 'oculto' | 'maior' | 'menor' }) => void;
+  onRoll: (formula: string, title: string, options?: { mode?: 'normal' | 'oculto' | 'maior' | 'menor' | 'vantagem' | 'desvantagem' }) => void;
   isOpen: boolean;
   onToggle: () => void;
+  activeTheme?: DiceTheme;
+  onChangeTheme?: (theme: DiceTheme) => void;
+  isRolling?: boolean;
+  lastNudgesApplied?: number;
+  errorMessage?: string | null;
+  onRepeat?: () => void;
 }
 
 export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
   onRoll,
   isOpen,
   onToggle,
+  activeTheme = 'obsidian',
+  onChangeTheme,
+  isRolling = false,
+  lastNudgesApplied = 0,
+  errorMessage = null,
+  onRepeat,
 }) => {
   const [selectedDie, setSelectedDie] = useState<DiceType>('d20');
   const [quantity, setQuantity] = useState<number>(1);
   const [mode, setMode] = useState<RollMode>('normal');
   const [showPaletteModal, setShowPaletteModal] = useState<boolean>(false);
-  const [diceTheme, setDiceTheme] = useState<'obsidian' | 'gold' | 'blood' | 'amethyst'>('obsidian');
+  const [diceTheme, setDiceTheme] = useState<DiceTheme>(activeTheme);
 
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef<{ startX: number; startY: number; posX: number; posY: number }>({ startX: 0, startY: 0, posX: 0, posY: 0 });
 
   useEffect(() => {
+    setDiceTheme(activeTheme);
+  }, [activeTheme]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'd' || e.key === 'D') {
-        if (!['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+        const tag = (e.target as HTMLElement).tagName;
+        const isEditable = (e.target as HTMLElement).isContentEditable;
+        if (!['INPUT', 'TEXTAREA'].includes(tag) && !isEditable) {
           onToggle();
         }
       }
@@ -74,13 +94,33 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
     }
 
     const modeTitle = rollMode === 'vantagem' ? ' com Vantagem' : rollMode === 'desvantagem' ? ' com Desvantagem' : '';
-    onRoll(formula, `Rolagem de ${label}${modeTitle}`);
+    onRoll(formula, `Rolagem de ${label}${modeTitle}`, { mode: rollMode });
+  };
+
+  const handleManualRoll = () => {
+    executeRoll(selectedDie, quantity, mode);
+  };
+
+  const handleRepeatClick = () => {
+    if (onRepeat) {
+      onRepeat();
+    } else {
+      executeRoll(selectedDie, quantity, mode);
+    }
   };
 
   const handleReset = () => {
     setQuantity(1);
     setSelectedDie('d20');
     setMode('normal');
+  };
+
+  const handleSelectTheme = (newTheme: DiceTheme) => {
+    setDiceTheme(newTheme);
+    setShowPaletteModal(false);
+    if (onChangeTheme) {
+      onChangeTheme(newTheme);
+    }
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -120,6 +160,7 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
     { type: 'd10', label: 'd10' },
     { type: 'd12', label: 'd12' },
     { type: 'd20', label: 'd20' },
+    { type: 'd100', label: 'd100' },
   ];
 
   const renderDieIcon = (type: DiceType, isSelected: boolean) => {
@@ -138,7 +179,7 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
     switch (type) {
       case 'moeda':
         return (
-          <svg viewBox="0 0 40 40" className="w-9 h-9 transition-transform group-hover:scale-110">
+          <svg viewBox="0 0 40 40" className="w-8 h-8 transition-transform group-hover:scale-110">
             <circle cx="20" cy="20" r="17" fill={fillColor} stroke={strokeColor} strokeWidth="1.8" />
             <circle cx="20" cy="20" r="14" fill="none" stroke={strokeColor} strokeWidth="0.8" strokeDasharray="2 2" opacity="0.6" />
             <path d="M20 12 C15 12 14 16 17 18 C22 21 21 28 15 26" fill="none" stroke={numColor} strokeWidth="1.8" strokeLinecap="round" />
@@ -147,7 +188,7 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
         );
       case 'd4':
         return (
-          <svg viewBox="0 0 40 40" className="w-9 h-9 transition-transform group-hover:scale-110">
+          <svg viewBox="0 0 40 40" className="w-8 h-8 transition-transform group-hover:scale-110">
             <polygon points="20,6 6,34 34,34" fill={fillColor} stroke={strokeColor} strokeWidth="1.8" />
             <line x1="20" y1="6" x2="20" y2="28" stroke={strokeColor} strokeWidth="1" opacity="0.7" />
             <line x1="6" y1="34" x2="20" y2="28" stroke={strokeColor} strokeWidth="1" opacity="0.7" />
@@ -157,7 +198,7 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
         );
       case 'd6':
         return (
-          <svg viewBox="0 0 40 40" className="w-9 h-9 transition-transform group-hover:scale-110">
+          <svg viewBox="0 0 40 40" className="w-8 h-8 transition-transform group-hover:scale-110">
             <polygon points="20,7 34,15 20,23 6,15" fill={fillColor} stroke={strokeColor} strokeWidth="1.6" />
             <polygon points="6,15 20,23 20,35 6,27" fill={fillColor} stroke={strokeColor} strokeWidth="1.6" filter="brightness(0.85)" />
             <polygon points="34,15 20,23 20,35 34,27" fill={fillColor} stroke={strokeColor} strokeWidth="1.6" filter="brightness(0.7)" />
@@ -168,7 +209,7 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
         );
       case 'd8':
         return (
-          <svg viewBox="0 0 40 40" className="w-9 h-9 transition-transform group-hover:scale-110">
+          <svg viewBox="0 0 40 40" className="w-8 h-8 transition-transform group-hover:scale-110">
             <polygon points="20,5 34,20 20,35 6,20" fill={fillColor} stroke={strokeColor} strokeWidth="1.8" />
             <line x1="20" y1="5" x2="20" y2="35" stroke={strokeColor} strokeWidth="1" opacity="0.7" />
             <line x1="6" y1="20" x2="34" y2="20" stroke={strokeColor} strokeWidth="1" opacity="0.7" />
@@ -178,7 +219,7 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
         );
       case 'd10':
         return (
-          <svg viewBox="0 0 40 40" className="w-9 h-9 transition-transform group-hover:scale-110">
+          <svg viewBox="0 0 40 40" className="w-8 h-8 transition-transform group-hover:scale-110">
             <polygon points="20,5 33,16 29,33 20,36 11,33 7,16" fill={fillColor} stroke={strokeColor} strokeWidth="1.8" />
             <line x1="20" y1="5" x2="20" y2="25" stroke={strokeColor} strokeWidth="1" opacity="0.7" />
             <line x1="7" y1="16" x2="20" y2="25" stroke={strokeColor} strokeWidth="1" opacity="0.7" />
@@ -190,7 +231,7 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
         );
       case 'd12':
         return (
-          <svg viewBox="0 0 40 40" className="w-9 h-9 transition-transform group-hover:scale-110">
+          <svg viewBox="0 0 40 40" className="w-8 h-8 transition-transform group-hover:scale-110">
             <polygon points="20,6 33,13 31,30 20,36 9,30 7,13" fill={fillColor} stroke={strokeColor} strokeWidth="1.8" />
             <polygon points="20,13 28,18 25,28 15,28 12,18" fill="none" stroke={strokeColor} strokeWidth="1" opacity="0.8" />
             <line x1="20" y1="6" x2="20" y2="13" stroke={strokeColor} strokeWidth="1" opacity="0.7" />
@@ -201,10 +242,22 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
             <text x="20" y="23" fill={numColor} fontSize="8" fontWeight="bold" textAnchor="middle" fontFamily="Spectral, serif">12</text>
           </svg>
         );
+      case 'd100':
+        return (
+          <svg viewBox="0 0 40 40" className="w-8 h-8 transition-transform group-hover:scale-110">
+            <polygon points="20,5 33,16 29,33 20,36 11,33 7,16" fill={fillColor} stroke={strokeColor} strokeWidth="1.8" />
+            <line x1="20" y1="5" x2="20" y2="25" stroke={strokeColor} strokeWidth="1" opacity="0.7" />
+            <line x1="7" y1="16" x2="20" y2="25" stroke={strokeColor} strokeWidth="1" opacity="0.7" />
+            <line x1="33" y1="16" x2="20" y2="25" stroke={strokeColor} strokeWidth="1" opacity="0.7" />
+            <line x1="11" y1="33" x2="20" y2="25" stroke={strokeColor} strokeWidth="1" opacity="0.7" />
+            <line x1="29" y1="33" x2="20" y2="25" stroke={strokeColor} strokeWidth="1" opacity="0.7" />
+            <text x="20" y="20" fill={numColor} fontSize="7" fontWeight="bold" textAnchor="middle" fontFamily="Spectral, serif">%</text>
+          </svg>
+        );
       case 'd20':
       default:
         return (
-          <svg viewBox="0 0 40 40" className="w-9 h-9 transition-transform group-hover:scale-110">
+          <svg viewBox="0 0 40 40" className="w-8 h-8 transition-transform group-hover:scale-110">
             <polygon points="20,5 35,14 35,27 20,36 5,27 5,14" fill={fillColor} stroke={strokeColor} strokeWidth="1.8" />
             <polygon points="20,10 30,28 10,28" fill="none" stroke={strokeColor} strokeWidth="1.2" opacity="0.9" />
             <line x1="20" y1="5" x2="20" y2="10" stroke={strokeColor} strokeWidth="1" opacity="0.7" />
@@ -230,9 +283,8 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
       {isOpen ? (
         <div 
           onMouseDown={handleMouseDown}
-          className="w-[390px] rounded-3xl bg-[#16131c]/92 backdrop-blur-xl border border-white/[0.09] shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_35px_rgba(245,158,11,0.06)] p-3.5 text-white animate-modal-in cursor-grab active:cursor-grabbing"
+          className="w-[420px] rounded-3xl bg-[#16131c]/92 backdrop-blur-xl border border-white/[0.09] shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_35px_rgba(245,158,11,0.06)] p-3.5 text-white animate-modal-in cursor-grab active:cursor-grabbing"
         >
-          {/* DICE ROW */}
           <div className="flex items-center justify-between px-1">
             {diceList.map(({ type, label }) => {
               const isSelected = selectedDie === type;
@@ -254,7 +306,7 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
                       </span>
                     )}
                   </div>
-                  <span className={`text-[11px] font-spectral tracking-wide ${
+                  <span className={`text-[10px] font-spectral tracking-wide ${
                     isSelected ? 'text-purple-300 font-bold' : 'text-amber-100/70 group-hover:text-amber-100'
                   }`}>
                     {label}
@@ -264,14 +316,12 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
             })}
           </div>
 
-          {/* HINT 1 */}
-          <div className="text-[10px] text-amber-100/40 font-spectral tracking-wide text-center mt-2.5 mb-1.5">
+          <div className="text-[10px] text-amber-100/40 font-spectral tracking-wide text-center mt-2 mb-1.5">
             Shift + clique monta a rolagem
           </div>
 
           <div className="border-t border-white/[0.07] my-2" />
 
-          {/* CONTROLS ROW */}
           <div className="no-drag flex items-center justify-between px-1">
             <div className="flex items-center gap-1">
               <button
@@ -295,7 +345,6 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
               </button>
             </div>
 
-            {/* MODE PILLS */}
             <div className="bg-black/40 p-0.5 rounded-full border border-white/[0.06] flex items-center gap-0.5">
               <button
                 type="button"
@@ -332,20 +381,30 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
               </button>
             </div>
 
-            {/* ACTION ICONS */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={handleReset}
-                title="Reiniciar seleções"
-                className="p-1 text-gray-400 hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-white/5"
+                onClick={handleManualRoll}
+                disabled={isRolling}
+                title={`Rolar ${quantity}${selectedDie}`}
+                className="px-2.5 py-1 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-xs font-spectral font-bold flex items-center gap-1 cursor-pointer shadow-md transition-colors"
+              >
+                <Play className="w-3 h-3 fill-white" />
+                <span>Rolar</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleRepeatClick}
+                disabled={isRolling}
+                title="Repetir última rolagem"
+                className="p-1 text-gray-400 hover:text-white transition-colors cursor-pointer rounded-lg hover:bg-white/5 disabled:opacity-40"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
               <button
                 type="button"
                 onClick={() => setShowPaletteModal(prev => !prev)}
-                title="Personalizar dados"
+                title="Personalizar tema dos dados"
                 className="p-1 text-gray-400 hover:text-purple-300 transition-colors cursor-pointer rounded-lg hover:bg-white/5"
               >
                 <Palette className="w-4 h-4" />
@@ -353,32 +412,53 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
             </div>
           </div>
 
-          {/* PALETTE THEMES POPOVER */}
+          {isRolling && (
+            <div className="mt-2 text-center text-[10px] text-purple-300 font-spectral animate-pulse flex items-center justify-center gap-1">
+              <span>🎲 Rolando dados físicos 3D...</span>
+            </div>
+          )}
+
+          {lastNudgesApplied > 0 && !isRolling && (
+            <div className="mt-1 text-center">
+              <span className="inline-flex items-center gap-1 text-[9px] text-amber-300 bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-500/20">
+                <Sparkles className="w-2.5 h-2.5" />
+                Recuperação física ativa ({lastNudgesApplied} {lastNudgesApplied === 1 ? 'nudge' : 'nudges'})
+              </span>
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="mt-2 p-1.5 rounded-xl bg-red-950/50 border border-red-500/40 text-red-200 text-[10px] flex items-center justify-center gap-1.5 font-spectral text-center">
+              <AlertTriangle className="w-3 h-3 text-red-400 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
           {showPaletteModal && (
             <div className="no-drag mt-3 p-2.5 rounded-2xl bg-black/60 border border-purple-500/30 flex items-center justify-between text-xs animate-fadeIn">
               <span className="text-[11px] font-spectral text-gray-300">Tema dos dados:</span>
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => { setDiceTheme('obsidian'); setShowPaletteModal(false); }}
+                  onClick={() => handleSelectTheme('obsidian')}
                   className={`w-5 h-5 rounded-full bg-[#22232c] border ${diceTheme === 'obsidian' ? 'ring-2 ring-purple-400 border-white' : 'border-white/20'}`}
                   title="Obsidiana"
                 />
                 <button
                   type="button"
-                  onClick={() => { setDiceTheme('amethyst'); setShowPaletteModal(false); }}
+                  onClick={() => handleSelectTheme('amethyst')}
                   className={`w-5 h-5 rounded-full bg-[#8b5cf6] border ${diceTheme === 'amethyst' ? 'ring-2 ring-purple-400 border-white' : 'border-white/20'}`}
                   title="Ametista"
                 />
                 <button
                   type="button"
-                  onClick={() => { setDiceTheme('gold'); setShowPaletteModal(false); }}
+                  onClick={() => handleSelectTheme('gold')}
                   className={`w-5 h-5 rounded-full bg-[#f59e0b] border ${diceTheme === 'gold' ? 'ring-2 ring-purple-400 border-white' : 'border-white/20'}`}
                   title="Ouro Nobre"
                 />
                 <button
                   type="button"
-                  onClick={() => { setDiceTheme('blood'); setShowPaletteModal(false); }}
+                  onClick={() => handleSelectTheme('blood')}
                   className={`w-5 h-5 rounded-full bg-[#ef4444] border ${diceTheme === 'blood' ? 'ring-2 ring-purple-400 border-white' : 'border-white/20'}`}
                   title="Sangue Paranormal"
                 />
@@ -386,7 +466,6 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
             </div>
           )}
 
-          {/* FOOTER HINTS */}
           <div className="text-[9.5px] text-amber-100/45 font-spectral text-center leading-relaxed mt-2.5">
             <div>Segure D para abrir a roleta</div>
             <div>Arraste o botão para qualquer borda</div>
@@ -394,7 +473,6 @@ export const VttDiceTray: React.FC<VttDiceTrayProps> = ({
         </div>
       ) : null}
 
-      {/* TOGGLE CHEVRON BUTTON */}
       <button
         type="button"
         onClick={onToggle}

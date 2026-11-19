@@ -26,8 +26,8 @@ export class DicePhysicsWorld {
     this.wallMaterial = new CANNON.Material('wall');
 
     const diceFloorContact = new CANNON.ContactMaterial(this.diceMaterial, this.floorMaterial, {
-      friction: 0.55,
-      restitution: 0.28,
+      friction: 0.32,
+      restitution: 0.24,
       contactEquationStiffness: 1e7,
       contactEquationRelaxation: 3.0,
     });
@@ -106,11 +106,11 @@ export class DicePhysicsWorld {
       mass,
       shape,
       material: this.diceMaterial,
-      linearDamping: 0.2,
-      angularDamping: 0.22,
+      linearDamping: 0.30,
+      angularDamping: 0.30,
       allowSleep: true,
-      sleepSpeedLimit: 0.14,
-      sleepTimeLimit: 0.35,
+      sleepSpeedLimit: 0.08,
+      sleepTimeLimit: 0.30,
     });
     return body;
   }

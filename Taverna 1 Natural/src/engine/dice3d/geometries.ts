@@ -1,7 +1,26 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
-import { DiceType3D, DiceTheme, FaceNormalMapping } from './types';
-import { DiceMaterialFactory } from './materials';
+import { DiceType3D, DiceTheme, FaceNormalMapping, DieRole } from './types.js';
+import { DiceMaterialFactory } from './materials.js';
+
+CANNON.ConvexPolyhedron.prototype.computeLocalAABB = function (
+  this: CANNON.ConvexPolyhedron,
+  aabbmin: CANNON.Vec3,
+  aabbmax: CANNON.Vec3
+): void {
+  const vertices = this.vertices;
+  aabbmin.set(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
+  aabbmax.set(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE);
+  for (let i = 0; i < vertices.length; i++) {
+    const v = vertices[i];
+    if (v.x < aabbmin.x) aabbmin.x = v.x;
+    if (v.x > aabbmax.x) aabbmax.x = v.x;
+    if (v.y < aabbmin.y) aabbmin.y = v.y;
+    if (v.y > aabbmax.y) aabbmax.y = v.y;
+    if (v.z < aabbmin.z) aabbmin.z = v.z;
+    if (v.z > aabbmax.z) aabbmax.z = v.z;
+  }
+};
 
 export interface BuiltDieGeometry {
   geometry: THREE.BufferGeometry;
@@ -18,17 +37,19 @@ function ensureCCW(vertices: CANNON.Vec3[], faces: number[][]): number[][] {
     const v1 = vertices[face[1]];
     const v2 = vertices[face[2]];
 
-    const cb = new CANNON.Vec3();
-    const ab = new CANNON.Vec3();
-    v2.vsub(v1, cb);
-    v0.vsub(v1, ab);
+    const edge1 = new CANNON.Vec3();
+    const edge2 = new CANNON.Vec3();
+    v1.vsub(v0, edge1);
+    v2.vsub(v0, edge2);
+
     const normal = new CANNON.Vec3();
-    cb.cross(ab, normal);
+    edge1.cross(edge2, normal);
 
     const centroid = new CANNON.Vec3();
-    v0.vadd(v1, centroid);
-    centroid.vadd(v2, centroid);
-    centroid.scale(1 / 3, centroid);
+    for (const idx of face) {
+      centroid.vadd(vertices[idx], centroid);
+    }
+    centroid.scale(1 / face.length, centroid);
 
     if (normal.dot(centroid) < 0) {
       return [...face].reverse();
@@ -43,8 +64,17 @@ function computeTriangleNormal(a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vect
   return new THREE.Vector3().crossVectors(ab, ac).normalize();
 }
 
+function computeOutwardTriangleNormal(a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3): THREE.Vector3 {
+  const norm = computeTriangleNormal(a, b, c);
+  const centroid = new THREE.Vector3().add(a).add(b).add(c).multiplyScalar(1 / 3);
+  if (norm.dot(centroid) < 0) {
+    norm.negate();
+  }
+  return norm;
+}
+
 export class DiceGeometryBuilder {
-  static build(type: DiceType3D, theme: DiceTheme): BuiltDieGeometry {
+  static build(type: DiceType3D, theme: DiceTheme, role: DieRole = 'standard'): BuiltDieGeometry {
     switch (type) {
       case 'd2':
         return this.buildD2(theme);
@@ -55,9 +85,9 @@ export class DiceGeometryBuilder {
       case 'd8':
         return this.buildD8(theme);
       case 'd10':
-        return this.buildD10(theme, false);
+        return this.buildD10(theme, role === 'tens' ? 'tens' : role === 'units' ? 'units' : 'standard');
       case 'd100':
-        return this.buildD10(theme, true);
+        return this.buildD10(theme, 'tens');
       case 'd12':
         return this.buildD12(theme);
       case 'd20':
@@ -72,7 +102,7 @@ export class DiceGeometryBuilder {
     const segments = 24;
 
     const geometry = new THREE.CylinderGeometry(radius, radius, height, segments);
-    
+
     const matSide = new THREE.MeshStandardMaterial({
       color: theme === 'gold' ? 0xd97706 : theme === 'blood' ? 0x7f1d1d : 0x2e2c38,
       metalness: 0.8,
@@ -82,19 +112,18 @@ export class DiceGeometryBuilder {
     const matBottom = DiceMaterialFactory.createMaterial('2', theme, 'circle');
 
     const materials = [matSide, matTop, matBottom];
-
     const cannonShape = new CANNON.Cylinder(radius, radius, height, 16);
 
     const faceMappings: FaceNormalMapping[] = [
-      { value: 1, normal: new THREE.Vector3(0, 1, 0) },
-      { value: 2, normal: new THREE.Vector3(0, -1, 0) },
+      { value: 1, displayValue: '1', normal: new THREE.Vector3(0, 1, 0) },
+      { value: 2, displayValue: '2', normal: new THREE.Vector3(0, -1, 0) },
     ];
 
     return { geometry, materials, cannonShape, faceMappings, radius };
   }
 
   private static buildD4(theme: DiceTheme): BuiltDieGeometry {
-    const radius = 1.3;
+    const radius = 1.35;
     const s = radius / Math.sqrt(3);
 
     const v: THREE.Vector3[] = [
@@ -105,10 +134,10 @@ export class DiceGeometryBuilder {
     ];
 
     const faceIndices = [
-      [0, 1, 2],
-      [0, 2, 3],
-      [0, 3, 1],
-      [1, 3, 2],
+      [0, 2, 1],
+      [0, 3, 2],
+      [0, 1, 3],
+      [1, 2, 3],
     ];
 
     const values = [1, 2, 3, 4];
@@ -135,8 +164,8 @@ export class DiceGeometryBuilder {
       const p1 = v[idx[1]];
       const p2 = v[idx[2]];
 
-      const norm = computeTriangleNormal(p0, p1, p2);
-      faceMappings.push({ value: values[f], normal: norm.clone() });
+      const norm = computeOutwardTriangleNormal(p0, p1, p2);
+      faceMappings.push({ value: values[f], displayValue: String(values[f]), normal: norm.clone() });
       materials.push(DiceMaterialFactory.createMaterial(values[f], theme, 'triangle'));
 
       positions.push(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
@@ -167,12 +196,12 @@ export class DiceGeometryBuilder {
     const cannonShape = new CANNON.Box(new CANNON.Vec3(h, h, h));
 
     const faceMappings: FaceNormalMapping[] = [
-      { value: 2, normal: new THREE.Vector3(1, 0, 0) },
-      { value: 5, normal: new THREE.Vector3(-1, 0, 0) },
-      { value: 1, normal: new THREE.Vector3(0, 1, 0) },
-      { value: 6, normal: new THREE.Vector3(0, -1, 0) },
-      { value: 3, normal: new THREE.Vector3(0, 0, 1) },
-      { value: 4, normal: new THREE.Vector3(0, 0, -1) },
+      { value: 2, displayValue: '2', normal: new THREE.Vector3(1, 0, 0) },
+      { value: 5, displayValue: '5', normal: new THREE.Vector3(-1, 0, 0) },
+      { value: 1, displayValue: '1', normal: new THREE.Vector3(0, 1, 0) },
+      { value: 6, displayValue: '6', normal: new THREE.Vector3(0, -1, 0) },
+      { value: 3, displayValue: '3', normal: new THREE.Vector3(0, 0, 1) },
+      { value: 4, displayValue: '4', normal: new THREE.Vector3(0, 0, -1) },
     ];
 
     return { geometry, materials, cannonShape, faceMappings, radius: size * 0.86 };
@@ -224,8 +253,8 @@ export class DiceGeometryBuilder {
       const p1 = v[idx[1]];
       const p2 = v[idx[2]];
 
-      const norm = computeTriangleNormal(p0, p1, p2);
-      faceMappings.push({ value: values[f], normal: norm.clone() });
+      const norm = computeOutwardTriangleNormal(p0, p1, p2);
+      faceMappings.push({ value: values[f], displayValue: String(values[f]), normal: norm.clone() });
       materials.push(DiceMaterialFactory.createMaterial(values[f], theme, 'triangle'));
 
       positions.push(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
@@ -245,10 +274,12 @@ export class DiceGeometryBuilder {
     return { geometry, materials, cannonShape, faceMappings, radius };
   }
 
-  private static buildD10(theme: DiceTheme, isPercentile: boolean): BuiltDieGeometry {
+  static buildD10(theme: DiceTheme, variant: 'standard' | 'tens' | 'units' = 'standard'): BuiltDieGeometry {
     const radius = 1.35;
     const h = radius * 1.15;
-    const hEq = radius * 0.22;
+    const s1 = Math.sin(Math.PI / 5);
+    const s2 = Math.sin(2 * Math.PI / 5);
+    const hEq = h * ((2 * s1 - s2) / (2 * s1 + s2));
     const rEq = radius * 0.95;
 
     const v: THREE.Vector3[] = [];
@@ -267,25 +298,25 @@ export class DiceGeometryBuilder {
 
     const kites: number[][] = [];
     for (let i = 0; i < 5; i++) {
-      const u1 = 2 + i;
-      const u2 = 2 + ((i + 1) % 5);
-      const l1 = 7 + i;
-      kites.push([0, u1, l1, u2]);
+      kites.push([0, 2 + i, 7 + i, 2 + ((i + 1) % 5)]);
     }
     for (let i = 0; i < 5; i++) {
-      const l1 = 7 + i;
-      const l2 = 7 + ((i + 1) % 5);
-      const u2 = 2 + ((i + 1) % 5);
-      kites.push([1, l2, u2, l1]);
+      kites.push([1, 7 + ((i + 1) % 5), 2 + ((i + 1) % 5), 7 + i]);
     }
 
-    const values = isPercentile 
-      ? ['00', '10', '20', '30', '40', '50', '60', '70', '80', '90']
-      : ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    let displayStrings: string[];
+    let numericValues: number[];
 
-    const numericValues = isPercentile
-      ? [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
-      : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    if (variant === 'tens') {
+      displayStrings = ['00', '10', '20', '30', '40', '50', '60', '70', '80', '90'];
+      numericValues = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90];
+    } else if (variant === 'units') {
+      displayStrings = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+      numericValues = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    } else {
+      displayStrings = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+      numericValues = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    }
 
     const positions: number[] = [];
     const normals: number[] = [];
@@ -306,9 +337,17 @@ export class DiceGeometryBuilder {
       const n1 = computeTriangleNormal(pTop, pLeft, pBot);
       const n2 = computeTriangleNormal(pTop, pBot, pRight);
       const avgNorm = new THREE.Vector3().addVectors(n1, n2).normalize();
+      const centroid = new THREE.Vector3().add(pTop).add(pLeft).add(pBot).add(pRight).multiplyScalar(0.25);
+      if (avgNorm.dot(centroid) < 0) {
+        avgNorm.negate();
+      }
 
-      faceMappings.push({ value: numericValues[k], normal: avgNorm.clone() });
-      materials.push(DiceMaterialFactory.createMaterial(values[k], theme, 'triangle'));
+      faceMappings.push({
+        value: numericValues[k],
+        displayValue: displayStrings[k],
+        normal: avgNorm.clone(),
+      });
+      materials.push(DiceMaterialFactory.createMaterial(displayStrings[k], theme, 'kite'));
 
       positions.push(pTop.x, pTop.y, pTop.z, pLeft.x, pLeft.y, pLeft.z, pBot.x, pBot.y, pBot.z);
       normals.push(avgNorm.x, avgNorm.y, avgNorm.z, avgNorm.x, avgNorm.y, avgNorm.z, avgNorm.x, avgNorm.y, avgNorm.z);
@@ -321,7 +360,7 @@ export class DiceGeometryBuilder {
       cannonFacesTriangles.push([top, left, bot], [top, bot, right]);
     }
 
-    const fixedFaces = ensureCCW(cannonVerts, cannonFacesTriangles);
+    const fixedFaces = ensureCCW(cannonVerts, kites);
     const cannonShape = new CANNON.ConvexPolyhedron({ vertices: cannonVerts, faces: fixedFaces });
 
     const geometry = new THREE.BufferGeometry();
@@ -393,8 +432,8 @@ export class DiceGeometryBuilder {
       const p3 = v[pent[3]];
       const p4 = v[pent[4]];
 
-      const norm = computeTriangleNormal(p0, p1, p2);
-      faceMappings.push({ value: values[f], normal: norm.clone() });
+      const norm = computeOutwardTriangleNormal(p0, p1, p2);
+      faceMappings.push({ value: values[f], displayValue: String(values[f]), normal: norm.clone() });
       materials.push(DiceMaterialFactory.createMaterial(values[f], theme, 'pentagon'));
 
       const tris = [
@@ -426,7 +465,7 @@ export class DiceGeometryBuilder {
       cannonTriangles.push([pent[0], pent[1], pent[2]], [pent[0], pent[2], pent[3]], [pent[0], pent[3], pent[4]]);
     }
 
-    const fixedFaces = ensureCCW(cannonVerts, cannonTriangles);
+    const fixedFaces = ensureCCW(cannonVerts, pentagons);
     const cannonShape = new CANNON.ConvexPolyhedron({ vertices: cannonVerts, faces: fixedFaces });
 
     const geometry = new THREE.BufferGeometry();
@@ -510,8 +549,8 @@ export class DiceGeometryBuilder {
       const p1 = v[idx[1]];
       const p2 = v[idx[2]];
 
-      const norm = computeTriangleNormal(p0, p1, p2);
-      faceMappings.push({ value: values[f], normal: norm.clone() });
+      const norm = computeOutwardTriangleNormal(p0, p1, p2);
+      faceMappings.push({ value: values[f], displayValue: String(values[f]), normal: norm.clone() });
       materials.push(DiceMaterialFactory.createMaterial(values[f], theme, 'triangle'));
 
       positions.push(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);

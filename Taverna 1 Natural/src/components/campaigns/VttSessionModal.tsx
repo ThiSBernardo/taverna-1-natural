@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Campaign } from '../../types/campaign';
 import { DiceRollResult } from '../../types/dice';
 import { Character } from '../../types/character';
@@ -17,6 +17,13 @@ import { VttRulerOverlay } from '../vtt/VttRulerOverlay';
 import { CharacterItem } from '../../types/items';
 import { CharacterAbility } from '../../types/abilities';
 import { CharacterRulesService } from '../../services/character-rules.service';
+import { Dice3DEngine } from '../../engine/dice3d/engine';
+import { 
+  DiceTheme, 
+  Dice3DStatus, 
+  DiceEngineError 
+} from '../../engine/dice3d/types';
+import { VttRollMessengerService } from '../../services/vtt-roll-messenger.service';
 
 interface VttSessionModalProps {
   isOpen: boolean;
@@ -47,6 +54,10 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
   const queryParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const paramPanel = queryParams.get('panel');
 
+  const diceCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const diceContainerRef = useRef<HTMLDivElement | null>(null);
+  const engineRef = useRef<Dice3DEngine | null>(null);
+
   const [activeTool, setActiveTool] = useState<VttToolType | null>('ruler');
   const [activeColor, setActiveColor] = useState<string>('#8b5cf6');
   const [isAnchored, setIsAnchored] = useState<boolean>(false);
@@ -60,6 +71,17 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
   const [isCreateSkillOpen, setIsCreateSkillOpen] = useState<boolean>(paramPanel === 'new_skill');
   const [isCampaignShopOpen, setIsCampaignShopOpen] = useState<boolean>(paramPanel === 'shop');
   const [isCharacterSheetOpen, setIsCharacterSheetOpen] = useState<boolean>(paramPanel === 'sheet');
+
+  const [diceTheme, setDiceTheme] = useState<DiceTheme>('obsidian');
+  const [diceStatus, setDiceStatus] = useState<Dice3DStatus>('idle');
+  const [lastNudgesApplied, setLastNudgesApplied] = useState<number>(0);
+  const [diceErrorMessage, setDiceErrorMessage] = useState<string | null>(null);
+  const [sessionRolls, setSessionRolls] = useState<DiceRollResult[]>(recentRolls);
+  const [lastRollParams, setLastRollParams] = useState<{
+    formula: string;
+    title: string;
+    options?: { mode?: 'normal' | 'oculto' | 'maior' | 'menor' | 'vantagem' | 'desvantagem' };
+  } | null>(null);
 
   const [characters, setCharacters] = useState<Character[]>(() => StorageService.getCharacters());
   const [selectedCharacter, setSelectedCharacter] = useState<Character>(() => {
@@ -128,8 +150,62 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
   const [selectedTokenId, setSelectedTokenId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isOpen || !diceCanvasRef.current) return;
+
+    const engine = new Dice3DEngine(diceCanvasRef.current, {
+      transparent: true,
+      theme: diceTheme,
+      shadows: true,
+      onStatusChange: (newStatus) => {
+        setDiceStatus(newStatus);
+        if (newStatus === 'cocked') {
+          setDiceErrorMessage('Dado tombado! Falha física de estabilização.');
+        } else if (newStatus === 'rolling') {
+          setDiceErrorMessage(null);
+        }
+      },
+      onRollSettled: (result) => {
+        setLastNudgesApplied(result.totalNudgesApplied);
+      },
+      onRollError: (err) => {
+        setDiceErrorMessage(err.message);
+      },
+      onNudgeApplied: (_dieId, _attempt, total) => {
+        setLastNudgesApplied(total);
+      }
+    });
+
+    engineRef.current = engine;
+    (window as unknown as { __vtt_engine?: Dice3DEngine | null }).__vtt_engine = engine;
+
+    const handleResize = () => {
+      if (diceContainerRef.current && engineRef.current) {
+        engineRef.current.resize(diceContainerRef.current.clientWidth, diceContainerRef.current.clientHeight);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
+    const unsubscribeMessenger = VttRollMessengerService.subscribe((roll) => {
+      setSessionRolls(prev => [roll, ...prev.filter(r => r.id !== roll.id)]);
+    });
+
+    return () => {
+      (window as unknown as { __vtt_engine?: Dice3DEngine | null }).__vtt_engine = null;
+      window.removeEventListener('resize', handleResize);
+      unsubscribeMessenger();
+      engine.destroy();
+      engineRef.current = null;
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+      const tag = (e.target as HTMLElement).tagName;
+      const isEditable = (e.target as HTMLElement).isContentEditable;
+      if (['INPUT', 'TEXTAREA'].includes(tag) || isEditable) return;
+
       if (e.key === 'l' || e.key === 'L') {
         setIsCampaignShopOpen(prev => !prev);
       } else if (e.key === 'c' || e.key === 'C') {
@@ -154,15 +230,6 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isCreateSkillOpen, isSkillsCatalogOpen, isCampaignShopOpen, isCharacterSheetOpen, isGroupStatusOpen]);
 
-  if (!isOpen) return null;
-
-  const showToast = (message: string) => {
-    setVttToast(message);
-    setTimeout(() => {
-      setVttToast(prev => prev === message ? null : prev);
-    }, 4000);
-  };
-
   useEffect(() => {
     if (selectedCharacter && selectedCharacter.id === 'char-arthur') {
       setTokens(prev => prev.map(t => {
@@ -178,6 +245,66 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
     }
   }, [selectedCharacter?.hp?.current, selectedCharacter?.hp?.max]);
 
+  if (!isOpen) return null;
+
+  const showToast = (message: string) => {
+    setVttToast(message);
+    setTimeout(() => {
+      setVttToast(prev => prev === message ? null : prev);
+    }, 4000);
+  };
+
+  const handleRollDice3D = async (
+    formula: string,
+    title: string,
+    options?: { mode?: 'normal' | 'oculto' | 'maior' | 'menor' | 'vantagem' | 'desvantagem' }
+  ) => {
+    setLastRollParams({ formula, title, options });
+    if (!engineRef.current) return;
+
+    const parsed = VttRollMessengerService.parseFormula(formula, options?.mode);
+    setDiceErrorMessage(null);
+
+    try {
+      const settled = await engineRef.current.roll(parsed.diceRequests, {
+        mode: parsed.mode,
+        theme: diceTheme
+      });
+
+      if (settled.isValid) {
+        const rollResult = VttRollMessengerService.formatRollSettled(settled, {
+          rollerName: selectedCharacter?.name || campaign.masterName || 'ThiSBernardo (Mestre)',
+          sourceTitle: title,
+          modifier: parsed.modifier,
+          overrideFormula: parsed.originalFormula
+        });
+
+        if (rollResult) {
+          VttRollMessengerService.publishRoll(rollResult);
+        }
+      }
+    } catch (err) {
+      if (err instanceof DiceEngineError && err.code === 'DICE_COCKED') {
+        setDiceErrorMessage(err.message);
+      }
+    }
+  };
+
+  const handleRepeatLastRoll = () => {
+    if (lastRollParams) {
+      handleRollDice3D(lastRollParams.formula, lastRollParams.title, lastRollParams.options);
+    } else {
+      handleRollDice3D('1d20', 'Rolagem de d20');
+    }
+  };
+
+  const handleThemeChange = (newTheme: DiceTheme) => {
+    setDiceTheme(newTheme);
+    if (engineRef.current) {
+      engineRef.current.setTheme(newTheme);
+    }
+  };
+
   const handleUpdateCharacter = (updated: Character) => {
     StorageService.saveCharacter(updated);
     setCharacters(StorageService.getCharacters());
@@ -185,7 +312,7 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
   };
 
   const handleShareSkillInChat = (skill: VttSkillItem) => {
-    onRollDice('1d20', `Habilidade exibida: ${skill.name} (${skill.type})`);
+    handleRollDice3D('1d20', `Habilidade exibida: ${skill.name} (${skill.type})`);
     showToast(`"${skill.name}" exibida no chat da mesa!`);
   };
 
@@ -254,17 +381,13 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-[#0c0a0f] text-white flex flex-col overflow-hidden select-none animate-fadeIn">
-      
-      {/* AUTHENTIC TABLETOP BACKGROUND SCENE */}
       <div className="absolute inset-0 select-none overflow-hidden">
-        {/* Base Layer: Vintage Desk, Scrolls, Candlestick, Pipe, Books */}
         <img
           src="/assets/tabletop_desk.jpg"
           alt="Dark Age Virtual Tabletop"
           className="absolute inset-0 w-full h-full object-cover pointer-events-none"
         />
 
-        {/* Seamless Clean Layer for Open Book and Pages on Bottom-Right */}
         <div
           className="absolute inset-0 pointer-events-none overflow-hidden"
           style={{ clipPath: 'polygon(55% 45%, 100% 45%, 100% 100%, 55% 100%)' }}
@@ -276,21 +399,16 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
           />
         </div>
 
-
-        {/* Ambient Warm Candlelight & Vignette Overlay */}
         <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/40 via-transparent to-black/30" />
       </div>
 
       <div className="fixed top-1.5 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/20 z-40 pointer-events-none" />
 
-
-      {/* INTERACTIVE MEASUREMENT RULER (Matches Screenshot 3) */}
       <VttRulerOverlay
         isActive={activeTool === 'ruler'}
         color={activeColor}
       />
 
-      {/* TACTICAL BATTLEMAP TOKENS (Interactive on Desk) */}
       <div className="absolute inset-0 pointer-events-auto z-20">
         {tokens.map(token => {
           const isSelected = selectedTokenId === token.id;
@@ -312,7 +430,6 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
                 className="w-full h-full rounded-full object-cover pointer-events-none"
               />
 
-              {/* Mini Health Bar */}
               <div className="absolute -bottom-2 w-10 h-1.5 rounded-full bg-black/80 overflow-hidden border border-white/20">
                 <div
                   className={`h-full ${isMonster ? 'bg-red-500' : 'bg-green-500'}`}
@@ -320,20 +437,21 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
                 />
               </div>
 
-
-              {/* Name Tag */}
               <div className="absolute -top-4 bg-black/85 px-1.5 py-0.2 rounded text-[9px] font-bold text-gray-200 whitespace-nowrap border border-white/10 pointer-events-none">
                 {token.name}
               </div>
-
             </div>
-
           );
         })}
       </div>
 
+      <div
+        ref={diceContainerRef}
+        className="absolute inset-0 z-30 pointer-events-none overflow-hidden"
+      >
+        <canvas ref={diceCanvasRef} className="w-full h-full block" />
+      </div>
 
-      {/* FLOATING TOP TOOLBAR */}
       <VttTopToolbar
         activeTool={activeTool}
         onSelectTool={setActiveTool}
@@ -346,7 +464,6 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
         onClose={onClose}
       />
 
-      {/* TOP-LEFT QUICK ACTIONS BAR */}
       <VttQuickBar
         isGroupStatusOpen={isGroupStatusOpen}
         onToggleGroupStatus={() => setIsGroupStatusOpen(prev => !prev)}
@@ -356,7 +473,6 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
         onOpenChronicle={() => showToast('Diário da Crônica acessado.')}
       />
 
-      {/* GROUP STATUS PANEL (Matches Screenshot 4) */}
       <VttGroupStatusPanel
         isOpen={isGroupStatusOpen}
         onClose={() => setIsGroupStatusOpen(false)}
@@ -367,7 +483,6 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
         }}
       />
 
-      {/* LEFT VERTICAL TOOLBAR (Matches Screenshot 3) */}
       <VttLeftToolbar
         isLocked={isLocked}
         onToggleLock={() => setIsLocked(prev => !prev)}
@@ -377,18 +492,23 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
         onOpenSkills={() => setIsSkillsCatalogOpen(true)}
       />
 
-      {/* FLOATING DICE TRAY (Matches Screenshot 2) */}
       <VttDiceTray
         isOpen={isDiceTrayOpen}
         onToggle={() => setIsDiceTrayOpen(prev => !prev)}
-        onRoll={onRollDice}
+        onRoll={handleRollDice3D}
+        onRepeat={handleRepeatLastRoll}
+        activeTheme={diceTheme}
+        onChangeTheme={handleThemeChange}
+        isRolling={diceStatus === 'rolling'}
+        lastNudgesApplied={lastNudgesApplied}
+        errorMessage={diceErrorMessage}
       />
 
-      {/* RIGHT SIDEBAR STRIP & CHAT DRAWER (Matches Screenshot 3 & 4) */}
       <VttRightSidebar
         participants={participantsList}
-        recentRolls={recentRolls}
-        onRollDice={onRollDice}
+        recentRolls={sessionRolls}
+        onRollDice={handleRollDice3D}
+        onClearRolls={() => setSessionRolls([])}
         onSelectCharacterSheet={(charId) => {
           const found = characters.find(c => c.id === charId);
           if (found) setSelectedCharacter(found);
@@ -396,7 +516,6 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
         }}
       />
 
-      {/* SKILLS CATALOG MODAL (Matches Screenshot 0) */}
       <VttSkillsCatalogModal
         isOpen={isSkillsCatalogOpen}
         onClose={() => setIsSkillsCatalogOpen(false)}
@@ -406,7 +525,6 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
         characterName={selectedCharacter?.name}
       />
 
-      {/* CREATE SKILL MODAL (Matches Screenshot 1) */}
       <VttCreateSkillModal
         isOpen={isCreateSkillOpen}
         onClose={() => setIsCreateSkillOpen(false)}
@@ -415,7 +533,6 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
         }}
       />
 
-      {/* CHARACTER SHEET OVERLAY (Canonical 6-Tabs, GM & Player view) */}
       <VttCharacterSheetOverlay
         isOpen={isCharacterSheetOpen}
         onClose={() => setIsCharacterSheetOpen(false)}
@@ -423,12 +540,11 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
         allCharacters={characters}
         onSelectCharacter={setSelectedCharacter}
         isMasterView={true}
-        onRollDice={onRollDice}
+        onRollDice={handleRollDice3D}
         onUpdateCharacter={handleUpdateCharacter}
         onShowToast={showToast}
       />
 
-      {/* CAMPAIGN ITEM SHOP MODAL */}
       <VttCampaignShopModal
         isOpen={isCampaignShopOpen}
         onClose={() => setIsCampaignShopOpen(false)}
@@ -436,14 +552,11 @@ export const VttSessionModal: React.FC<VttSessionModalProps> = ({
         onShowToast={showToast}
       />
 
-      {/* IN-APP GLASSMORPHISM TOAST */}
       {vttToast && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-60 bg-[#161322]/95 border border-purple-500/60 text-purple-200 px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-2xl backdrop-blur-md animate-fadeIn">
           <span>✨ {vttToast}</span>
         </div>
-
       )}
-
     </div>
   );
 };
